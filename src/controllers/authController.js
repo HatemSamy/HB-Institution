@@ -62,57 +62,26 @@ export const loginUser = async (req, res) => {
   sendTokenResponse(user, 200, res);
 };
 
-// export const forgotPassword = async (req, res) => {
-//   const user = await User.findOne({ email: req.body.email });
-
-//   if (!user) {
-//     return res.status(404).json({ success: false, message: 'No user with that email' });
-//   }
-
-//   const resetToken = user.getResetPasswordToken();
-//   await user.save({ validateBeforeSave: false });
-
-//   const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-
-//   const message = `
-//     <p>You requested a password reset</p>
-//     <p>Click the link below to reset your password:</p>
-//     <a href="${resetUrl}">${resetUrl}</a>
-//   `;
-
-//   try {
-//     await sendEmail(user.email, 'Password Reset Request', message);
-//     res.status(200).json({ success: true, message: 'Reset email sent' });
-//   } catch (err) {
-//     user.resetPasswordToken = undefined;
-//     user.resetPasswordExpire = undefined;
-//     await user.save({ validateBeforeSave: false });
-
-//     res.status(500).json({ success: false, message: 'Email could not be sent' });
-//   }
-// };
 
 
 // @route   POST /api/v1/auth/forgot-password
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
-  // 1. ابحث عن المستخدم
+  
   const user = await User.findOne({ email });
   if (!user) {
     return res.status(404).json({ success: false, message: 'User not found' });
   }
 
-  // 2. أنشئ كود عشوائي (6 أرقام مثلاً)
   const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
 
-  // 3. خزّن الكود وتاريخ انتهاء الصلاحية
   user.resetCode = crypto.createHash('sha256').update(code).digest('hex');
   user.resetCodeExpire = Date.now() + 10 * 60 * 1000; // 10 دقائق
 
   await user.save({ validateBeforeSave: false });
 
-  // 4. أرسل الكود إلى الإيميل
+
   const message = `
     <h3>Hello ${user.firstName},</h3>
     <p>Your password reset code is:</p>
