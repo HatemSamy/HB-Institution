@@ -37,6 +37,16 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'instructor', 'admin'],
     default: 'student'
   },
+
+    qualification: {
+    type: String
+  },
+  experienceYears: {
+    type: Number
+  },
+  specialization: {
+    type: String
+  },
   avatar: {
     type: String,
     default: 'default-avatar.jpg'

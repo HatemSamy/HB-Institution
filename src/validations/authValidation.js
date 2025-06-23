@@ -1,49 +1,61 @@
 
-import joi from 'joi';
+import Joi from 'joi';
 
 // Validation schemas
-export const registerSchema = joi.object({
-  firstName: joi.string()
-    .trim()
-    .max(25)
-    .required()
-    .messages({
-      'string.empty': 'First name is required',
-      'string.max': 'First name cannot be more than 25 characters',
-      'any.required': 'First name is required'
-    }),
-  lastName: joi.string()
-    .trim()
-    .max(25)
-    .required()
-    .messages({
-      'string.empty': 'Last name is required',
-      'string.max': 'Last name cannot be more than 25 characters',
-      'any.required': 'Last name is required'
-    }),
-  email: joi.string()
-    .email()
-    .required()
-    .messages({
-      'string.empty': 'Email is required',
-      'string.email': 'Please provide a valid email',
-      'any.required': 'Email is required'
-    }),
-  password: joi.string()
-    .min(6)
-    .required()
-    .messages({
-      'string.empty': 'Password is required',
-      'string.min': 'Password must be at least 6 characters',
-      'any.required': 'Password is required'
-    }),
-  role: joi.string()
-    .valid('student', 'instructor', 'admin')
-    .default('student')
-});
 
-export const loginSchema = joi.object({
-  email: joi.string()
+export const registerSchema = {
+  body:Joi.object({
+  firstName: Joi.string().trim().max(25).required().messages({
+    'string.empty': 'First name is required',
+    'string.max': 'First name cannot be more than 25 characters',
+    'any.required': 'First name is required'
+  }),
+  lastName: Joi.string().trim().max(25).required().messages({
+    'string.empty': 'Last name is required',
+    'string.max': 'Last name cannot be more than 25 characters',
+    'any.required': 'Last name is required'
+  }),
+  email: Joi.string().email().required().messages({
+    'string.empty': 'Email is required',
+    'string.email': 'Please provide a valid email',
+    'any.required': 'Email is required'
+  }),
+  password: Joi.string().min(6).required().messages({
+    'string.min': 'Password must be at least 6 characters long',
+    'string.empty': 'Password is required',
+    'any.required': 'Password is required'
+  }),
+  confirmPassword: Joi.any()
+    .equal(Joi.ref('password'))
+    .required()
+    .label('Confirm password')
+    .messages({
+      'any.only': 'Passwords do not match',
+      'any.required': 'Please confirm your password'
+    }),
+  experienceYears: Joi.when('role', {
+    is: 'instructor',
+    then: Joi.number().integer().required(),
+    otherwise: Joi.forbidden()
+  }),
+  specialization: Joi.when('role', {
+    is: 'instructor',
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden()
+  }),
+   qualification: Joi.when('role', {
+    is: 'instructor',
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden()
+  }),
+  role: Joi.string().valid('student', 'instructor', 'admin').default('student')
+})
+};
+
+
+
+export const loginSchema ={body: Joi.object({
+  email: Joi.string()
     .email()
     .required()
     .messages({
@@ -51,16 +63,16 @@ export const loginSchema = joi.object({
       'string.email': 'Please provide a valid email',
       'any.required': 'Email is required'
     }),
-  password: joi.string()
+  password: Joi.string()
     .required()
     .messages({
       'string.empty': 'Password is required',
       'any.required': 'Password is required'
     })
-});
+ })};
 
- export const forgotPasswordSchema = joi.object({
-  email: joi.string()
+ export const forgotPasswordSchema = {body:Joi.object({
+  email: Joi.string()
     .email()
     .required()
     .messages({
@@ -68,24 +80,24 @@ export const loginSchema = joi.object({
       'string.email': 'Please provide a valid email',
       'any.required': 'Email is required'
     })
-});
+} )};
 
-export const resetPasswordSchema = joi.object({
-  email: joi.string().email().required().messages({
+export const resetPasswordSchema = {body:Joi.object({
+  email: Joi.string().email().required().messages({
     'string.empty': 'Email is required',
     'string.email': 'Please provide a valid email'
   }),
-  newPassword: joi.string().min(6).required().messages({
+  newPassword: Joi.string().min(6).required().messages({
     'string.empty': 'New password is required',
     'string.min': 'Password must be at least 6 characters'
   })
-});
+})};
 
 
-export const verifyResetCodeSchema = joi.object({
-  code: joi.string().length(6).required().messages({
+export const verifyResetCodeSchema = {body:Joi.object({
+  code: Joi.string().length(6).required().messages({
     'string.empty': 'Reset code is required',
     'string.length': 'Reset code must be 6 characters'
   })
-});
-
+})};
+ 

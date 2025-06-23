@@ -2,42 +2,66 @@ import User from "../models/User.js";
 import { sendEmail } from "../utils/email.js";
 import crypto from 'crypto';
 import sendTokenResponse from "../utils/generateToken.js";
+import { AppError } from "../middleware/erroeHandling.js";
+import { log } from "console";
 
-export const registerUser = async (req, res) => {
-  try {
-    const { firstName, lastName, email, password, role } = req.body;
+// export const registerUser = async (req, res) => {
+//   try {
+//     const { firstName, lastName, email, password, role } = req.body;
 
-    if (role && role.toLowerCase() === 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not allowed to register as admin',
-      });
-    }
+//     if (role && role.toLowerCase() === 'admin') {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'You are not allowed to register as admin',
+//       });
+//     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email',
-      });
-    }
+//     const existingUser = await User.findOne({ email: email.toLowerCase() });
+//     if (existingUser) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'User already exists with this email',
+//       });
+//     }
 
-    const allowedRoles = ['student', 'instructor'];
-    const userRole = role && allowedRoles.includes(role) ? role : 'student';
+//     const allowedRoles = ['student', 'instructor'];
+//     const userRole = role && allowedRoles.includes(role) ? role : 'student';
 
-    const user = await User.create({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.toLowerCase().trim(),
-      password,
-      role: userRole,
-    });
+//     const user = await User.create({
+//       firstName: firstName.trim(),
+//       lastName: lastName.trim(),
+//       email: email.toLowerCase().trim(),
+//       password,
+//       role: userRole,
+//     });
 
-    sendTokenResponse(user, 201, res);
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error during registration' });
+//     sendTokenResponse(user, 201, res);
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: 'Server error during registration' });
+//   }
+// };
+
+
+
+
+export const registerUser = async (req, res, next) => {
+
+log('Registering user with data', req.body);
+  // Prevent admin self-signup
+  if (req.body.role === 'admin') {
+    return next(new AppError('You are not allowed to register as admin', 403));
   }
+
+  const existing = await User.findOne({ email: req.body.email });
+  if (existing) {
+    return next(new AppError('User already exists with this email', 400));
+  }
+
+  const user = await User.create(req.body);
+
+  sendTokenResponse(user, 201, res); // sets token
 };
+
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -114,16 +138,15 @@ export const  verifyResetCode = async (req, res) => {
     const user = await User.findOne({
       resetCode: hashedCode,
       resetCodeExpire: { $gt: Date.now() }
-    });
+    }).select('email');
 
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid or expired code.' });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Code verified successfully',
-      userId: user._id 
+    return res.status(200).json({success: true,
+  message: 'Code verified successfully',
+      userData:user
     });
 
   } catch (error) {

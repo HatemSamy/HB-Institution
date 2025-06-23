@@ -45,6 +45,8 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import connectDB from './src/config/DB/connection.js';
 import authRoutes from './src/routes/authRoutes.js';
+import courseRoutes from './src/routes/courseRouter.js';
+
 import { globalErrorHandling } from './src/middleware/erroeHandling.js'
 
 
@@ -88,6 +90,8 @@ const baseUrl = process.env.BASEURL
 // API Routes
 
 app.use(`${baseUrl}/auth`, authRoutes);
+app.use(`${baseUrl}/courses`,courseRoutes);
+
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -115,24 +119,9 @@ app.use(globalErrorHandling);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server 
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.log(`Error: ${err.message}`);
-  console.log('Shutting down the server due to Uncaught Exception');
-  process.exit(1);
-});
 
 export default app;
