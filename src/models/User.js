@@ -16,15 +16,11 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [25, 'Last name cannot be more than 25 characters']
   },
-  email: {
+  lastName: {
     type: String,
     required: [true, 'Please add an email'],
     unique: true,
     lowercase: true,
-    match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please add a valid email'
-    ]
   },
   password: {
     type: String,
@@ -38,19 +34,28 @@ const userSchema = new mongoose.Schema({
     default: 'student'
   },
 
-    qualification: {
-    type: String
-  },
-  experienceYears: {
-    type: Number
-  },
-  specialization: {
-    type: String
-  },
+  specialization: [{
+    type: String,
+    required: true
+  }],
+  courses: [{
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      required: true
+    },
+    levels: [{
+      type: String,
+      enum: ['Beginner', 'Intermediate', 'Advanced'],
+      required: true
+    }]
+  }],
+   
   avatar: {
     type: String,
     default: 'default-avatar.jpg'
   },
+ 
   isActive: {
     type: Boolean,
     default: true

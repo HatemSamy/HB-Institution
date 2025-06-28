@@ -1,85 +1,57 @@
-import { Schema, model } from 'mongoose';
+import mongoose, { Schema, model } from 'mongoose';
 
-const courseSchema = new Schema({
+// Course Model
+const courseSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
-    index: true  
+    trim: true
   },
-
-  course_imageId: String,
-  course_imageUrl: String,
-
-  description: {
-    type: String,
-    required: true
-  },
-
-
-  instructorId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-
-  total_duration: String,
-
-  price: {
-    type: Number,
-    required: true
-  },
-
-  students_enrolled: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    }
-  ],
-
-  level: {
-    type: String,
-    enum: ['beginner', 'intermediate', 'advanced'],
-    default: 'beginner',
-    required: true
-  },
-
   duration: {
-    days: { type: Number, default: 0 },
-    hours: { type: Number, default: 0 }
+    type: String,
+    required: true,
+    trim: true
   },
-
-  enrollment_count: {
+   price: {
     type: Number,
-    default: 0
+    required: true,
+    trim: true
+  },
+  description: {
+  
+      type: String,
+    required: true
   },
 
-  rating: {
+  levels: [{
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced'],
+    required: true
+  }],
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+   rating: {
     type: Number,
     default: 0,
     min: 0,
     max: 5,
   },
-
-  approved: {
-    type: Boolean,
-    required: true,
-    default: false
-  },
-
-  chapters: [
+chapters: [
     {
       type: Schema.Types.ObjectId,
       ref: 'Chapter',
     }
   ],
-
-  CreatedBy: {
+    CreatedBy: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   }
-
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
 
 

@@ -53,6 +53,8 @@ log('Registering user with data', req.body);
   }
 
   const existing = await User.findOne({ email: req.body.email });
+  console.log(req.body.email);
+  
   if (existing) {
     return next(new AppError('User already exists with this email', 400));
   }

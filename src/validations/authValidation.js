@@ -33,21 +33,13 @@ export const registerSchema = {
       'any.only': 'Passwords do not match',
       'any.required': 'Please confirm your password'
     }),
-  experienceYears: Joi.when('role', {
-    is: 'instructor',
-    then: Joi.number().integer().required(),
-    otherwise: Joi.forbidden()
-  }),
+ 
   specialization: Joi.when('role', {
     is: 'instructor',
     then: Joi.string().required(),
     otherwise: Joi.forbidden()
   }),
-   qualification: Joi.when('role', {
-    is: 'instructor',
-    then: Joi.string().required(),
-    otherwise: Joi.forbidden()
-  }),
+   
   role: Joi.string().valid('student', 'instructor', 'admin').default('student')
 })
 };
