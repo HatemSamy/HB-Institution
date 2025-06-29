@@ -2,7 +2,7 @@ import User from "../models/User.js";
 import { sendEmail } from "../utils/email.js";
 import crypto from 'crypto';
 import sendTokenResponse from "../utils/generateToken.js";
-import { AppError } from "../middleware/erroeHandling.js";
+import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import { log } from "console";
 
 // export const registerUser = async (req, res) => {
@@ -44,25 +44,24 @@ import { log } from "console";
 
 
 
-export const registerUser = async (req, res, next) => {
+export const registerUser = asynchandler(async (req, res, next) => {
 
-log('Registering user with data', req.body);
-  // Prevent admin self-signup
+
   if (req.body.role === 'admin') {
     return next(new AppError('You are not allowed to register as admin', 403));
   }
+ const {email}=req.body
+ 
+  const existing = await User.findOne({ email});
 
-  const existing = await User.findOne({ email: req.body.email });
-  console.log(req.body.email);
-  
   if (existing) {
     return next(new AppError('User already exists with this email', 400));
   }
 
   const user = await User.create(req.body);
 
-  sendTokenResponse(user, 201, res); // sets token
-};
+  sendTokenResponse(user, 201, res); 
+});
 
 
 export const loginUser = async (req, res) => {
