@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 
-const enrollmentSchema = new mongoose.Schema({
+const ClassSelectionSchema = new mongoose.Schema({
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student',
+    ref: 'User',
     required: true
   },
   courseId: {
@@ -18,7 +18,7 @@ const enrollmentSchema = new mongoose.Schema({
   },
   instructorId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'instructor',
+    ref: 'User',
     required: true
   },
   groupId: {
@@ -37,14 +37,11 @@ const enrollmentSchema = new mongoose.Schema({
     enum: ['pending', 'confirmed', 'cancelled'],
     default: 'pending'
   },
-  confirmationEmailSent: {
-    type: Boolean,
-    default: false
-  }
+  
 }, {
   timestamps: true
 });
 
-const Enrollment = mongoose.model('Enrollment', enrollmentSchema);
+const ClassSelectionModel = mongoose.model('ClassSelection', ClassSelectionSchema);
 
-export default Enrollment
+export default ClassSelectionModel

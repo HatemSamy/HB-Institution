@@ -21,6 +21,8 @@ export const pathName = {
     createproduct: 'products',
     CreateCategory: 'Category',
     Course: 'Course',
+    Units: 'Units',
+
     Instructor: 'Instructor',
 
 };

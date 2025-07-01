@@ -38,19 +38,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   }],
-  courses: [{
-    courseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Course',
-      required: true
-    },
-    levels: [{
-      type: String,
-      enum: ['Beginner', 'Intermediate', 'Advanced'],
-      required: true
-    }]
-  }],
-   
+ 
   avatar: {
     type: String,
     default: 'default-avatar.jpg'

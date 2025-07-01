@@ -1,4 +1,4 @@
-import mongoose, { Schema, model } from 'mongoose';
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 // Course Model
 const courseSchema = new mongoose.Schema({
@@ -38,17 +38,17 @@ const courseSchema = new mongoose.Schema({
     min: 0,
     max: 5,
   },
-chapters: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'Chapter',
-    }
-  ],
+
     CreatedBy: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
-  }
+  },
+  CategoryId: {
+        type: Types.ObjectId,
+        ref:"category",
+        required: true,
+    },
 }, {
   timestamps: true
 });

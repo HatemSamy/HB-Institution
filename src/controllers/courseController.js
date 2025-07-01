@@ -1,22 +1,31 @@
-// import { AppError, asynchandler } from "../middleware/erroeHandling.js";
-import { log } from "console";
+
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
-import { paginate } from "../middleware/pagination.js";
-// import { asynchandler } from '../middlewares/asyncHandler.js';
-import Chapter from '../models/Chapter.js';
+import Chapter from '../models/Unit.js';
 import Course from "../models/Course.js";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Group from "../models/Group.js";
+import CategoryModel from "../models/category.js";
+import Unit from "../models/Unit.js";
+import ClassSelectionModel from "../models/ClassSelection.js";
+import { sendEmail } from "../utils/email.js";
 
 
 
 export const createCourse = async (req, res, next) => {
   try {
     const { title, duration, price, description, levels } = req.body;
+    const{CategoryId} =req.params
 
     if (!title || !duration || !price || !description || !levels) {
       return res.status(400).json({ message: 'All fields are required.' });
+    }
+    const category= await CategoryModel.findById(CategoryId)
+    console.log(category);
+    
+    if (!category) {
+    return next(new AppError('category not found', 404));
+      
     }
 
     const allowedLevels = ['Beginner', 'Intermediate', 'Advanced'];
@@ -32,6 +41,7 @@ export const createCourse = async (req, res, next) => {
       duration,
       price,
       description,
+      CategoryId,
       levels: levelsArray,
       CreatedBy: req.user.id,
       image: req.file?.secure_url || undefined
@@ -50,26 +60,24 @@ export const createCourse = async (req, res, next) => {
 
 
 
-// GET /api/courses/:id - Get single course by ID
 export const getCourseById = asynchandler(async (req, res, next) => {
   const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return next(new AppError('Invalid course ID format', 400));
-  }
-  const course = await Course
-    .find({ _id: id, isActive: true })
-    
+  const course = await Course.findOne({ _id: id, isActive: true })
     .populate('CreatedBy', 'firstName lastName email')
-    .populate('chapters', 'title description topic content attachments')
-  if (!course || course.isActive === false) {
+    .populate('CategoryId', 'name description');
+
+  if (!course) {
     return next(new AppError('Course not found', 404));
   }
 
+  const units = await Unit.find({ courseId: id }).sort({ createdAt: 1 }).select('title description');
 
   res.status(200).json({
     success: true,
-    data: course
+    data: {
+      ...course.toObject(),
+      units
+    }
   });
 });
 
@@ -77,7 +85,8 @@ export const getCourseById = asynchandler(async (req, res, next) => {
 // 1. GET ALL COURSES
 export const getAllCourses = asynchandler(async (req, res) => {
 
-  const courses = await Course.find().select('name description levels');
+  const courses = await Course.find().select('name description levels')
+  .populate('CategoryId', 'name description');
 
   if (!courses) {
     return next(new AppError('Courses not found', 404));
@@ -112,47 +121,6 @@ export const GetLevelByCourse = asynchandler(async (req, res) => {
   });
 
 });
-
-
-// 3. GET INSTRUCTORS BY COURSE AND LEVEL
-export const getInstructorsByCourseAndLevel = asynchandler(async (req, res) => {
-  try {
-    const { courseId, level } = req.body;
-
-    const instructors = await User.find({
-      role: 'instructor',
-      isActive: true,
-      isBlocked: false,
-      'courses.courseId': courseId,
-      'courses.levels': level
-    }).select('firstName lastName email specialization avatar');
-   console.log(instructors);
-
-    // Format the response to match frontend expectations
-    const formattedInstructors = instructors.map(instructor => ({
-      _id: instructor._id,
-      name: `${instructor.firstName} ${instructor.lastName}`,
-      firstName: instructor.firstName,
-      lastName: instructor.lastName,
-      email: instructor.email,
-      specialization: instructor.specialization,
-      avatar: instructor.avatar
-    }));
-   console.log(formattedInstructors);
-   
-    res.json({
-      success: true,
-      data: formattedInstructors
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching instructors',
-      error: error.message
-    });
-  }
-});
-
 
 
 
@@ -268,19 +236,16 @@ export const getTimeSlotsForGroup  = asynchandler(async (req, res) => {
 
 
 
-// 6. CREATE CLASS SELECTION (STUDENT SELECTION)
-export const ClassSelection = asynchandler( async (req, res) => {
+export const ClassSelection = asynchandler(async (req, res) => {
   try {
     const {
-      studentId,
       courseId,
       level,
-      instructorId, // Changed from teacherId
+      instructorId,
       groupId,
       selectedSchedule
     } = req.body;
 
-    // Validate if group has available spots
     const group = await Group.findById(groupId);
     if (!group) {
       return res.status(404).json({
@@ -296,9 +261,8 @@ export const ClassSelection = asynchandler( async (req, res) => {
       });
     }
 
-    // Check if student already has a selection for this course
-    const existingSelection = await ClassSelection.findOne({
-      studentId,
+    const existingSelection = await ClassSelectionModel.findOne({
+     studentId:req.user._id,
       courseId,
       status: { $in: ['pending', 'confirmed'] }
     });
@@ -310,12 +274,11 @@ export const ClassSelection = asynchandler( async (req, res) => {
       });
     }
 
-    // Create class selection
-    const classSelection = new ClassSelection({
-      studentId,
+    const classSelection = new ClassSelectionModel({
+      studentId:req.user._id,
       courseId,
       level,
-      instructorId, // Changed from teacherId
+      instructorId,
       groupId,
       selectedSchedule,
       status: 'pending'
@@ -323,16 +286,43 @@ export const ClassSelection = asynchandler( async (req, res) => {
 
     await classSelection.save();
 
-    // Populate the selection for response
-    const populatedSelection = await ClassSelection.findById(classSelection._id)
+    const populatedSelection = await ClassSelectionModel.findById(classSelection._id)
       .populate('studentId', 'firstName lastName email')
       .populate('courseId', 'name')
       .populate('instructorId', 'firstName lastName email')
-      .populate('groupId', 'name schedule');
+      .populate('groupId');
+
+    const student = populatedSelection.studentId;
+    const course = populatedSelection.courseId;
+    const instructor = populatedSelection.instructorId;
+    const groupData = populatedSelection.groupId;
+
+    const htmlMessage = `
+      <h2>Class Selection Confirmation</h2>
+      <p>Dear ${student.firstName},</p>
+      <p>You have successfully selected a class for:</p>
+      <ul>
+        <li><strong>Course:</strong> ${course.title}</li>
+        <li><strong>Instructor:</strong> ${instructor.firstName} ${instructor.lastName}</li>
+        <li><strong>Level:</strong> ${level}</li>
+        <li><strong>Group Code:</strong> ${groupData.code}</li>
+        <li><strong>Schedule:</strong>
+          <ul>
+            ${groupData.schedule.map(s =>
+              `<li>${s.dayOfWeek}: ${s.startTime} - ${s.endTime} (${s.timezone})</li>`
+            ).join('')}
+          </ul>
+        </li>
+      </ul>
+      <p>Status: <strong>${populatedSelection.status}</strong></p>
+      <p>Thank you for your selection.</p>
+    `;
+
+    await sendEmail(student.email, 'Class Selection Confirmation', htmlMessage);
 
     res.status(201).json({
       success: true,
-      message: 'Class selection created successfully',
+      message: 'Class selection created and email sent successfully',
       data: populatedSelection
     });
   } catch (error) {
@@ -343,9 +333,6 @@ export const ClassSelection = asynchandler( async (req, res) => {
     });
   }
 });
-
-
-
 
 
 
@@ -367,43 +354,6 @@ export const approveCourse = asynchandler(async (req, res, next) => {
   });
 });
 
-
-
-
-
-
-
-
-// export const enrollStudent = asynchandler(async (req, res, next) => {
-
-//   const course = await Course.findById(req.params.courseId);
-
-//   if (!course) {
-//     return next(new Error('course_not_found'));
-//   }
-
-//   if (!course.approved) {
-//     return next(new AppError('course_not_approved'));
-//   }
-
-//   const studentId = req.user.id;
-
-//   // Already enrolled?
-//   if (course.students_enrolled.includes(studentId)) {
-//     return next(new Error('already_enrolled'));
-//   }
-
-//   course.students_enrolled.push(studentId);
-//   course.enrollment_count += 1;
-
-//   await course.save();
-
-//   res.status(200).json({
-//     success: true,
-//     message: 'student_enrolled_successfully',
-//     data: course
-//   });
-// });
 
 
 
@@ -484,5 +434,56 @@ export const rateCourse = asynchandler(async (req, res, next) => {
 
 
 
+export const getInstructorsByCourseAndLevel = asynchandler(async (req, res) => {
+  const { courseId, level } = req.body;
 
+  // Step 1: Find groups matching courseId and level, and populate instructor info
+  const groups = await Group.find({ courseId, level })
+    .populate({
+      path: 'instructorId',
+      match: {
+        role: 'instructor',
+        isActive: true,
+        isBlocked: false
+      },
+      select: 'firstName lastName email specialization avatar'
+    });
+
+  // Step 2: Extract instructor data and filter out nulls
+  const instructors = groups
+    .map(group => group.instructorId)
+    .filter(ins => ins); // remove nulls (in case of unmatched instructors)
+
+  // Step 3: Format instructor info
+  const formattedInstructors = instructors.map(ins => ({
+    _id: ins._id,
+    name: `${ins.firstName} ${ins.lastName}`,
+    firstName: ins.firstName,
+    lastName: ins.lastName,
+    email: ins.email,
+    specialization: ins.specialization,
+    avatar: ins.avatar
+  }));
+
+  // Step 4: Format groups info (optional: filter null instructor)
+  const formattedGroups = groups
+    .filter(g => g.instructorId) // keep only groups with valid instructor
+    .map(g => ({
+      _id: g._id,
+      code: g.code,
+      courseId: g.courseId,
+      level: g.level,
+      schedule: g.schedule,
+      instructorId: g.instructorId._id,
+      instructorName: `${g.instructorId.firstName} ${g.instructorId.lastName}`
+    }));
+
+  res.json({
+    success: true,
+    data: {
+      instructors: formattedInstructors,
+      groups: formattedGroups
+    }
+  });
+});
 

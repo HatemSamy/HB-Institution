@@ -46,6 +46,12 @@ import cookieParser from 'cookie-parser';
 import connectDB from './src/config/DB/connection.js';
 import authRoutes from './src/routes/authRoutes.js';
 import courseRoutes from './src/routes/courseRouter.js';
+import categoryRoutes from './src/routes/categoryRouter.js';
+import groupRoutes from './src/routes/groupRouter.js';
+import unitRoutes from './src/routes/unitRoutes.js';
+
+
+
 
 import { globalErrorHandling } from './src/middleware/erroeHandling.js'
 
@@ -91,6 +97,12 @@ const baseUrl = process.env.BASEURL
 
 app.use(`${baseUrl}/auth`, authRoutes);
 app.use(`${baseUrl}/courses`,courseRoutes);
+app.use(`${baseUrl}/category`,categoryRoutes);
+app.use(`${baseUrl}/group`,groupRoutes);
+app.use(`${baseUrl}/unit`,unitRoutes);
+
+
+
 
 
 // Welcome route

@@ -8,12 +8,13 @@ import { ratingParamsSchema } from '../validations/CourseValidation.js';
 
 const router = express.Router();
 // Public routes (more specific routes first)
-router.get('/getGroupByCourse/:id', courseController.getGroupByCourse); // GET /api/courses/getGroupByCourse/:id
-router.get('/Get-Level-ByCourse/:courseId', courseController.GetLevelByCourse); // GET /api/courses/Get-Level-ByCourse
 router.get('/CourseLevel', courseController.getInstructorsByCourseAndLevel); // GET /api/courses/instructor/:instructorId
 
+router.get('/getGroupByCourse/:id', courseController.getGroupByCourse); 
+router.get('/Get-Level-ByCourse/:courseId', courseController.GetLevelByCourse); 
+
 // Enroll in course
-router.post('/:courseId/enroll', protect, courseController.ClassSelection); // POST /api/courses/:courseId/enroll
+router.post('/enroll', protect, courseController.ClassSelection); // POST /api/courses/:courseId/enroll
 
 // Rating route
 router.put('/:courseId/rating/:rating', protect, validation(ratingParamsSchema), courseController.rateCourse); // PUT /api/courses/:courseId/rating/:rating
@@ -28,6 +29,6 @@ router.get('/:id', courseController.getCourseById); // GET /api/courses/:id
 router.get('/', courseController.getAllCourses); // GET /api/courses
 
 // Create new course
-router.post('/', protect, myMulter(pathName.Course).single('image'), HME, courseController.createCourse); // POST /api/courses
+router.post('/:CategoryId', protect, myMulter(pathName.Course).single('image'), HME, courseController.createCourse); // POST /api/courses
 
 export default router;
