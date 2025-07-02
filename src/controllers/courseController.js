@@ -9,10 +9,9 @@ import CategoryModel from "../models/category.js";
 import Unit from "../models/Unit.js";
 import ClassSelectionModel from "../models/ClassSelection.js";
 import { sendEmail } from "../utils/email.js";
+import cloudinary from "../utils/cloudinary.js";
 
-
-
-export const createCourse = async (req, res, next) => {
+export const createCourse = (async (req, res, next) => {
   try {
     const { title, duration, price, description, levels } = req.body;
     const{CategoryId} =req.params
@@ -21,8 +20,6 @@ export const createCourse = async (req, res, next) => {
       return res.status(400).json({ message: 'All fields are required.' });
     }
     const category= await CategoryModel.findById(CategoryId)
-    console.log(category);
-    
     if (!category) {
     return next(new AppError('category not found', 404));
       
@@ -36,6 +33,11 @@ export const createCourse = async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid level provided.' });
     }
 
+     const file = req.file;
+    const { secure_url} = await cloudinary.uploader.upload(file.path, {
+    folder: `HB-Institution/Course/${title}`
+  });
+
     const newCourse = new Course({
       title,
       duration,
@@ -44,7 +46,7 @@ export const createCourse = async (req, res, next) => {
       CategoryId,
       levels: levelsArray,
       CreatedBy: req.user.id,
-      image: req.file?.secure_url || undefined
+      image: secure_url || undefined
     });
 
     const savedCourse = await newCourse.save();
@@ -56,7 +58,7 @@ export const createCourse = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+});
 
 
 

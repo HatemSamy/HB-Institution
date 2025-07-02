@@ -5,7 +5,7 @@ import express from 'express';
 import * as categoryController from '../controllers/categoryController.js';
 
 import { protect } from '../middleware/auth.js';
-import { myMulter, HME, pathName } from '../utils/multer.js';
+import { myMulter, HME, pathName, Multer, fileValidation } from '../utils/multer.js';
 
 
 const router = express.Router();
@@ -16,7 +16,7 @@ router.get('/', categoryController.getAllCategories);
 
 router.get('/:id', categoryController.getCategoryById);
 // Protected routes (Create / Update / Delete)
-router.post('/',protect,myMulter(pathName.CreateCategory).single('image'),HME,categoryController.createCategory);
+router.post('/',protect,Multer(fileValidation.image).single('image'),HME,categoryController.createCategory);
 
 
 

@@ -2,7 +2,7 @@ import express from 'express';
 import * as courseController from '../controllers/courseController.js';
 import { authorize, protect } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
-import { HME, myMulter, pathName } from '../utils/multer.js';
+import { fileValidation, HME, Multer, myMulter, pathName } from '../utils/multer.js';
 import { validation } from '../middleware/validation.js';
 import { ratingParamsSchema } from '../validations/CourseValidation.js';
 
@@ -29,6 +29,6 @@ router.get('/:id', courseController.getCourseById); // GET /api/courses/:id
 router.get('/', courseController.getAllCourses); // GET /api/courses
 
 // Create new course
-router.post('/:CategoryId', protect, myMulter(pathName.Course).single('image'), HME, courseController.createCourse); // POST /api/courses
+router.post('/:CategoryId', protect, Multer(fileValidation.image).single('image'), HME, courseController.createCourse); // POST /api/courses
 
 export default router;

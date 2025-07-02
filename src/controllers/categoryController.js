@@ -2,7 +2,7 @@
 import { AppError, asynchandler } from '../middleware/erroeHandling.js';
 import { paginate } from '../middleware/pagination.js';
 import CategoryModel from '../models/category.js';
-
+import cloudinary from "../utils/cloudinary.js";
 
 // Get all categories
 // Get all categories
@@ -66,30 +66,36 @@ export const getCategoryById = asynchandler(async (req, res, next) => {
 });
 
 
-// Create new category
+
+
 export const createCategory = asynchandler(async (req, res, next) => {
   const { name, description } = req.body;
- console.log(req.body);
- 
-  if (!req.file) {
-    return next(new AppError('image is required', 400));
-    
-  }
-
   if (!name || !description) {
     return next(new AppError('Name and description are required', 400));
   }
 
+  if (!req.file) {
+    return next(new AppError('Image is required', 400));
+  }
+
+  const file = req.file;
+  const { secure_url, public_id } = await cloudinary.uploader.upload(file.path, {
+    folder: `HB-Institution/Category/${name}`
+  });
   const newCategory = new CategoryModel({
     name,
     description,
-    image: req.file?.secure_url,
-    imageId: req.file?.public_id,
+    image: secure_url,
+    imageId: public_id,
   });
 
   const saved = await newCategory.save();
-  res.status(201).json({ message: 'Category created', data: saved });
+  res.status(201).json({
+    message: 'Category created successfully',
+    data: saved
+  });
 });
+
 
 // Update category
 export const updateCategory = asynchandler(async (req, res, next) => {
