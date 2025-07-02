@@ -45,7 +45,7 @@ export const createCourse = (async (req, res, next) => {
       description,
       CategoryId,
       levels: levelsArray,
-      CreatedBy: req.user.id,
+      CreatedBy: req.user._id,
       image: secure_url || undefined
     });
 
