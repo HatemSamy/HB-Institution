@@ -56,7 +56,7 @@ export function myMulter(pathName) {
 
 
 export const fileValidation = {
-    image: ['image/png', 'image/jpeg', 'image/jif'],
+    image: ['image/png', 'image/jpeg', 'image/jif','image/webp'],
     pdf: ['application/pdf'],
 
 }

@@ -87,7 +87,7 @@ export const getCourseById = asynchandler(async (req, res, next) => {
 // 1. GET ALL COURSES
 export const getAllCourses = asynchandler(async (req, res) => {
 
-  const courses = await Course.find().select('name description levels')
+  const courses = await Course.find().select('-CreatedBy -createdAt -updatedAt')
   .populate('CategoryId', 'name description');
 
   if (!courses) {
@@ -127,44 +127,44 @@ export const GetLevelByCourse = asynchandler(async (req, res) => {
 
 
 // 4. GET GROUPS BY COURSE, LEVEL, AND TEACHER
-export const getGroupByCourse = asynchandler(async (req, res) => {
+// export const getGroupByCourse = asynchandler(async (req, res) => {
 
-  const { courseId, level, teacherId } = req.params;
-  const groups = await Group.find({
-    courseId,
-    level,
-    teacherId,
-    isActive: true
-  }).populate('courseId', 'name')
-    .populate('teacherId', 'name')
-    .select('name maxStudents currentStudents schedule');
+//   const { courseId, level, teacherId } = req.params;
+//   const groups = await Group.find({
+//     courseId,
+//     level,
+//     teacherId,
+//     isActive: true
+//   }).populate('courseId', 'name')
+//     .populate('teacherId', 'name')
+//     .select('name maxStudents currentStudents schedule');
 
-  // Add availability status
-  const groupsWithAvailability = groups.map(group => ({
-    ...group.toObject(),
-    isAvailable: group.currentStudents < group.maxStudents,
-    spotsLeft: group.maxStudents - group.currentStudents
-  }));
+//   // Add availability status
+//   const groupsWithAvailability = groups.map(group => ({
+//     ...group.toObject(),
+//     isAvailable: group.currentStudents < group.maxStudents,
+//     spotsLeft: group.maxStudents - group.currentStudents
+//   }));
 
-  res.json({
-    success: true,
-    data: groupsWithAvailability
-  });
+//   res.json({
+//     success: true,
+//     data: groupsWithAvailability
+//   });
 
-});
+// });
 
 
 // 4. GET GROUPS BY COURSE, LEVEL, AND INSTRUCTOR
 export const getGroupsByCourseAndInstructor = asynchandler( async (req, res) => {
   try {
-    const { courseId, level, instructorId } = req.params;
+    const { courseId, level, instructorId } = req.body;
 
     const groups = await Group.find({
       courseId,
       level,
       instructorId, // Changed from teacherId
       isActive: true
-    }).populate('courseId', 'name')
+    }).populate('courseId', 'title')
       .populate('instructorId', 'firstName lastName email') // Updated populate
       .select('name maxStudents currentStudents schedule');
 

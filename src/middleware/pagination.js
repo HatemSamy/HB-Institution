@@ -7,7 +7,7 @@ export function paginate(page, size) {
     }
 
     if (!size || size <= 0) {
-        size = 2
+        size = 6
     }
 
     const skip = (page - 1) * size

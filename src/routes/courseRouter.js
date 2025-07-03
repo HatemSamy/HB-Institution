@@ -9,8 +9,9 @@ import { ratingParamsSchema } from '../validations/CourseValidation.js';
 const router = express.Router();
 // Public routes (more specific routes first)
 router.get('/CourseLevel', courseController.getInstructorsByCourseAndLevel); // GET /api/courses/instructor/:instructorId
+router.get('/getGroupsBy_CourseAndInstructor',protect ,courseController.getGroupsByCourseAndInstructor); 
 
-router.get('/getGroupByCourse/:id', courseController.getGroupByCourse); 
+// router.get('/getGroupByCourse/:id', courseController.getGroupByCourse); 
 router.get('/Get-Level-ByCourse/:courseId', courseController.GetLevelByCourse); 
 
 // Enroll in course

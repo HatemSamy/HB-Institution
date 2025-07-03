@@ -5,45 +5,6 @@ import sendTokenResponse from "../utils/generateToken.js";
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import { log } from "console";
 
-// export const registerUser = async (req, res) => {
-//   try {
-//     const { firstName, lastName, email, password, role } = req.body;
-
-//     if (role && role.toLowerCase() === 'admin') {
-//       return res.status(403).json({
-//         success: false,
-//         message: 'You are not allowed to register as admin',
-//       });
-//     }
-
-//     const existingUser = await User.findOne({ email: email.toLowerCase() });
-//     if (existingUser) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'User already exists with this email',
-//       });
-//     }
-
-//     const allowedRoles = ['student', 'instructor'];
-//     const userRole = role && allowedRoles.includes(role) ? role : 'student';
-
-//     const user = await User.create({
-//       firstName: firstName.trim(),
-//       lastName: lastName.trim(),
-//       email: email.toLowerCase().trim(),
-//       password,
-//       role: userRole,
-//     });
-
-//     sendTokenResponse(user, 201, res);
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: 'Server error during registration' });
-//   }
-// };
-
-
-
-
 export const registerUser = asynchandler(async (req, res, next) => {
 
 

@@ -2,6 +2,7 @@
 import { AppError, asynchandler } from '../middleware/erroeHandling.js';
 import { paginate } from '../middleware/pagination.js';
 import CategoryModel from '../models/category.js';
+import Course from '../models/Course.js';
 import cloudinary from "../utils/cloudinary.js";
 
 // Get all categories
@@ -23,47 +24,92 @@ export const getRecommendedCategories = asynchandler(async (req, res, next) => {
     });
 });
 
-export const getAllCategories = asynchandler(async (req, res, next) => {
+// export const getAllCategories = asynchandler(async (req, res, next) => {
 
-  const{page,size}=req.query
+//   const{page,size}=req.query
     
-    const {skip,limit}=paginate(page,size)
+//     const {skip,limit}=paginate(page,size)
   
-    const categories = await CategoryModel.find({})
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
+//     const categories = await CategoryModel.find({})
+//         .sort({ createdAt: -1 })
+//         .skip(skip)
+//         .limit(parseInt(limit));
         
-    const totalCategories = await CategoryModel.countDocuments()
-    const totalPages = Math.ceil(totalCategories / limit);
+//     const totalCategories = await CategoryModel.countDocuments()
+//     const totalPages = Math.ceil(totalCategories / limit);
 
-    res.status(200).json({
-        success: true,
-        data: categories,
-        pagination: {
-            currentPage: parseInt(page),
-            totalPages,
-            totalCategories,
-            hasNextPage: page < totalPages,
-            hasPrevPage: page > 1
-        }
-    });
-});
+//     res.status(200).json({
+//         success: true,
+//         data: categories,
+//         pagination: {
+//             currentPage: parseInt(page),
+//             totalPages,
+//             totalCategories,
+//             hasNextPage: page < totalPages,
+//             hasPrevPage: page > 1
+//         }
+//     });
+// });
 // Get category by ID
-export const getCategoryById = asynchandler(async (req, res, next) => {
-    const { id } = req.params;
-   
-    const category = await CategoryModel.findById(id);
-    
-    if (!category) {
-        return next(new AppError('Category not found', 404));
-    }
 
-    res.status(200).json({
-        success: true,
-        data: category
-    });
+
+
+
+export const getAllCategories = asynchandler(async (req, res, next) => {
+ const{page,size}=req.query
+    
+  const {skip,limit}=paginate(page,size)
+
+  const categories = await CategoryModel.find({})
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  const totalCategories = await CategoryModel.countDocuments();
+  const totalPages = Math.ceil(totalCategories / limit);
+
+  // Get courses for each category
+  const categoriesWithCourses = await Promise.all(
+    categories.map(async (category) => {
+      const courses = await Course.find({ CategoryId: category._id }).select('title image price rating levels');
+      return {
+        ...category.toObject(),
+        courses,
+      };
+    })
+  );
+
+  res.status(200).json({
+    success: true,
+    data: categoriesWithCourses,
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages,
+      totalCategories,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+  });
 });
+export const getCategoryById = asynchandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const category = await CategoryModel.findById(id);
+  if (!category) {
+    return next(new AppError('Category not found', 404));
+  }
+
+  const courses = await Course.find({ CategoryId: id });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      category,
+      courses
+    }
+  });
+});
+
 
 
 
