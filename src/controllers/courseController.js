@@ -126,71 +126,41 @@ export const GetLevelByCourse = asynchandler(async (req, res) => {
 
 
 
-// 4. GET GROUPS BY COURSE, LEVEL, AND TEACHER
-// export const getGroupByCourse = asynchandler(async (req, res) => {
-
-//   const { courseId, level, teacherId } = req.params;
-//   const groups = await Group.find({
-//     courseId,
-//     level,
-//     teacherId,
-//     isActive: true
-//   }).populate('courseId', 'name')
-//     .populate('teacherId', 'name')
-//     .select('name maxStudents currentStudents schedule');
-
-//   // Add availability status
-//   const groupsWithAvailability = groups.map(group => ({
-//     ...group.toObject(),
-//     isAvailable: group.currentStudents < group.maxStudents,
-//     spotsLeft: group.maxStudents - group.currentStudents
-//   }));
-
-//   res.json({
-//     success: true,
-//     data: groupsWithAvailability
-//   });
-
-// });
 
 
 // 4. GET GROUPS BY COURSE, LEVEL, AND INSTRUCTOR
-export const getGroupsByCourseAndInstructor = asynchandler( async (req, res) => {
-  try {
-    const { courseId, level, instructorId } = req.body;
+export const getGroupsByCourseAndInstructor = asynchandler(async (req, res, next) => {
+  const { courseId, level, instructorId } = req.params;
 
-    const groups = await Group.find({
-      courseId,
-      level,
-      instructorId, // Changed from teacherId
-      isActive: true
-    }).populate('courseId', 'title')
-      .populate('instructorId', 'firstName lastName email') // Updated populate
-      .select('name maxStudents currentStudents schedule');
+  const groups = await Group.find({
+    courseId,
+    level,
+    instructorId,
+    isActive: true
+  })
+    .populate('courseId', 'title')
+    .populate('instructorId', 'firstName lastName email')
+    .select('name maxStudents currentStudents schedule');
 
-    // Add availability status and format instructor name
-    const groupsWithAvailability = groups.map(group => ({
-      ...group.toObject(),
-      instructor: {
-        _id: group.instructorId._id,
-        name: `${group.instructorId.firstName} ${group.instructorId.lastName}`,
-        email: group.instructorId.email
-      },
-      isAvailable: group.currentStudents < group.maxStudents,
-      spotsLeft: group.maxStudents - group.currentStudents
-    }));
-
-    res.json({
-      success: true,
-      data: groupsWithAvailability
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching groups',
-      error: error.message
-    });
+  if (!groups.length) {
+    return next(new AppError('Groups not found', 404));
   }
+
+  const groupsWithAvailability = groups.map(group => ({
+    ...group.toObject(),
+    instructor: {
+      _id: group.instructorId._id,
+      name: `${group.instructorId.firstName} ${group.instructorId.lastName}`,
+      email: group.instructorId.email
+    },
+    isAvailable: group.currentStudents < group.maxStudents,
+    spotsLeft: group.maxStudents - group.currentStudents
+  }));
+
+  res.json({
+    success: true,
+    data: groupsWithAvailability
+  });
 });
 
 
@@ -436,10 +406,9 @@ export const rateCourse = asynchandler(async (req, res, next) => {
 
 
 
-export const getInstructorsByCourseAndLevel = asynchandler(async (req, res) => {
-  const { courseId, level } = req.body;
+export const getInstructorsByCourseAndLevel = asynchandler(async (req, res, next) => {
+  const { courseId, level } = req.params;
 
-  // Step 1: Find groups matching courseId and level, and populate instructor info
   const groups = await Group.find({ courseId, level })
     .populate({
       path: 'instructorId',
@@ -451,12 +420,14 @@ export const getInstructorsByCourseAndLevel = asynchandler(async (req, res) => {
       select: 'firstName lastName email specialization avatar'
     });
 
-  // Step 2: Extract instructor data and filter out nulls
+  if (!groups.length) {
+    return next(new AppError('No instructors found for this course and level', 404));
+  }
+
   const instructors = groups
     .map(group => group.instructorId)
-    .filter(ins => ins); // remove nulls (in case of unmatched instructors)
+    .filter(ins => ins);
 
-  // Step 3: Format instructor info
   const formattedInstructors = instructors.map(ins => ({
     _id: ins._id,
     name: `${ins.firstName} ${ins.lastName}`,
@@ -467,9 +438,8 @@ export const getInstructorsByCourseAndLevel = asynchandler(async (req, res) => {
     avatar: ins.avatar
   }));
 
-  // Step 4: Format groups info (optional: filter null instructor)
   const formattedGroups = groups
-    .filter(g => g.instructorId) // keep only groups with valid instructor
+    .filter(g => g.instructorId)
     .map(g => ({
       _id: g._id,
       code: g.code,
