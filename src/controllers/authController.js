@@ -3,26 +3,114 @@ import { sendEmail } from "../utils/email.js";
 import crypto from 'crypto';
 import sendTokenResponse from "../utils/generateToken.js";
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
+import jwt from 'jsonwebtoken';
 import { log } from "console";
 
+// export const registerUser = asynchandler(async (req, res, next) => {
+
+
+//   if (req.body.role === 'admin') {
+//     return next(new AppError('You are not allowed to register as admin', 403));
+//   }
+//  const {email}=req.body
+ 
+//   const existing = await User.findOne({ email});
+
+//   if (existing) {
+//     return next(new AppError('User already exists with this email', 400));
+//   }
+
+//   const user = await User.create(req.body);
+
+//   sendTokenResponse(user, 201, res); 
+// });
+//______________________
+
+
+
+
+
+//{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}
+
+
+
 export const registerUser = asynchandler(async (req, res, next) => {
+  const { email, firstName, lastName, role,specialization ,password} = req.body;
+   console.log(req.body);
 
-
-  if (req.body.role === 'admin') {
+  if (role === 'admin') {
     return next(new AppError('You are not allowed to register as admin', 403));
   }
- const {email}=req.body
- 
-  const existing = await User.findOne({ email});
 
+  const existing = await User.findOne({ email });
   if (existing) {
     return next(new AppError('User already exists with this email', 400));
   }
 
-  const user = await User.create(req.body);
+  const token = jwt.sign(
+    { email, firstName, lastName, role,password,specialization},
+    process.env.JWT_SECRET,
+  );
 
-  sendTokenResponse(user, 201, res); 
+  const protocol = req.protocol;
+  const host = req.get('host');  
+  const confirmUrl = `${protocol}://${host}/api/auth/confirm-email/${token}`;
+
+  await sendEmail(
+    email,
+    'Confirm Your Email',
+    `Please confirm your email by clicking this link:\n\n${confirmUrl}`
+  );
+
+  res.status(200).json({
+    success: true,
+    message: 'Confirmation email sent. Please check your inbox.'
+  });
 });
+
+
+
+
+export const confirmEmail = asynchandler(async (req, res, next) => {
+  const { token } = req.params;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_EMAIL_SECRET);
+    const { email, firstName, lastName, role, specialization, password } = decoded;
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return next(new AppError('User already exists', 400));
+    }
+
+    const user = await User.create({
+      email,
+      firstName,
+      lastName,
+      role,
+      specialization,
+      password
+    });
+
+    sendTokenResponse(user, 201, res);
+  } catch (error) {
+    return next(new AppError('Invalid or expired token', 400));
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+//{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 
 
 export const loginUser = async (req, res) => {

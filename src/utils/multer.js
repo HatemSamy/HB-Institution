@@ -4,6 +4,8 @@ import { nanoid } from 'nanoid';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cloudinary from 'cloudinary'
+
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,10 +58,10 @@ export function myMulter(pathName) {
 
 
 export const fileValidation = {
-    image: ['image/png', 'image/jpeg', 'image/jif','image/webp'],
-    pdf: ['application/pdf'],
-
-}
+  image: ['image/jpeg', 'image/png', 'image/webp'],
+  pdf: ['application/pdf'], 
+  all: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+};
 
 
 export function Multer(customValidation=fileValidation.image) {
@@ -76,3 +78,44 @@ export function Multer(customValidation=fileValidation.image) {
     const upload = multer({ fileFilter, storage })
     return upload
 }
+
+
+
+// export function Multer(customValidation = ['application/pdf']) {
+//   const storage = multer.memoryStorage(); // ← استخدم memoryStorage لرفع مباشر إلى Cloudinary
+
+//   function fileFilter(req, file, cb) {
+//     if (customValidation.includes(file.mimetype)) {
+//       cb(null, true);
+//     } else {
+//       const error = new Error('Invalid file format');
+//       error.status = 400;
+//       cb(error, false);
+//     }
+//   }
+
+//   return multer({ storage, fileFilter });
+// }
+
+
+
+
+export const uploadToCloudinary = (buffer, filename, folder, resource_type = 'auto') => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type,
+        public_id: filename,
+        use_filename: true,
+        unique_filename: false,
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};

@@ -32,7 +32,6 @@ const UnitSchema = new mongoose.Schema({
    default: true
   },
  
-  attachments: [String],
   
    courseId: {
     type: mongoose.Schema.Types.ObjectId,

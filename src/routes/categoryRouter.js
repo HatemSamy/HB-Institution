@@ -3,8 +3,9 @@ import express from 'express';
 
 import * as categoryController from '../controllers/categoryController.js';
 
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 import { myMulter, HME, pathName, Multer, fileValidation } from '../utils/multer.js';
+import { AccessRoles } from '../utils/helpers.js';
 
 
 const router = express.Router();
@@ -18,6 +19,6 @@ router.post('/', protect, Multer(fileValidation.image).single('image'), HME, cat
 
 
 
-router.delete('/:id', protect, categoryController.deleteCategory);
+router.delete('/:id', protect,authorize(AccessRoles.instructor), categoryController.deleteCategory);
 
 export default router;

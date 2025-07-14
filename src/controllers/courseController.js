@@ -34,7 +34,7 @@ export const createCourse = (async (req, res, next) => {
     }
 
      const file = req.file;
-    const { secure_url} = await cloudinary.uploader.upload(file.path, {
+    const { secure_url,public_id} = await cloudinary.uploader.upload(file.path, {
     folder: `HB-Institution/Course/${title}`
   });
 
@@ -46,7 +46,9 @@ export const createCourse = (async (req, res, next) => {
       CategoryId,
       levels: levelsArray,
       CreatedBy: req.user._id,
-      image: secure_url || undefined
+      image: secure_url || undefined,
+      imageId:public_id
+
     });
 
     const savedCourse = await newCourse.save();

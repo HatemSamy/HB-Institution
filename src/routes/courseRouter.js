@@ -48,5 +48,10 @@ router.post('/:CategoryId', protect, Multer(fileValidation.image).single('image'
 
 /* ---------- Dynamic Routes (Must be Last) ---------- */
 router.get('/:id', courseController.getCourseById); // MUST BE AFTER ALL SPECIFIC ROUTES
-router.get('/', courseController.getAllCourses);    // CAN BE HERE (
+router.get('/', courseController.getAllCourses);   
+router.get('/', courseController.getAllCourses);  
+
+// router.get('/', courseController.);  
+ 
+
 export default router;

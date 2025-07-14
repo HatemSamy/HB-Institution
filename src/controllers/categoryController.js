@@ -169,17 +169,15 @@ export const updateCategory = asynchandler(async (req, res, next) => {
 
 // Delete category
 export const deleteCategory = asynchandler(async (req, res, next) => {
-    const { id } = req.params;
+  const category = await CategoryModel.findOneAndDelete({ _id: req.params.id });
 
-    const deletedCategory = await CategoryModel.findByIdAndDelete(id);
+  if (!category) {
+    return next(new AppError( 'Category not found', 404));
 
-    if (!deletedCategory) {
-        return next(new AppError('Category not found', 404));
-    }
+  }
 
-    res.status(200).json({
-        success: true,
-        message: 'Category deleted successfully',
-        data: deletedCategory
-    });
+  res.status(200).json({
+    success: true,
+    message: 'Category and related courses deleted successfully'
+  });
 });

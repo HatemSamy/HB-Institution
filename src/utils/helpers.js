@@ -38,12 +38,11 @@ export const AccessRoles = {
 
 
 export const normalizeUnitBody = (req, res, next) => {
-  // Parse topic as array if it's sent as JSON string
   if (typeof req.body.topic === 'string') {
     try {
       req.body.topic = JSON.parse(req.body.topic);
     } catch (err) {
-      req.body.topic = [req.body.topic]; // fallback to array with one element
+      req.body.topic = [req.body.topic]; 
     }
   }
 
