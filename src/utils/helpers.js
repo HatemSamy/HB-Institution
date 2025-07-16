@@ -18,7 +18,7 @@ export const isCourseApproved = async (courseId) => {
 
 
 export const Roles = {
-    Admin: "Admin",
+    Admin: "admin",
     Student: "student",
     instructor: "instructor"
 

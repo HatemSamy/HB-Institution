@@ -1,125 +1,103 @@
 import User from "../models/User.js";
 import { sendEmail } from "../utils/email.js";
-import crypto from 'crypto';
 import sendTokenResponse from "../utils/generateToken.js";
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import jwt from 'jsonwebtoken';
-import { log } from "console";
-
-// export const registerUser = asynchandler(async (req, res, next) => {
-
-
-//   if (req.body.role === 'admin') {
-//     return next(new AppError('You are not allowed to register as admin', 403));
-//   }
-//  const {email}=req.body
- 
-//   const existing = await User.findOne({ email});
-
-//   if (existing) {
-//     return next(new AppError('User already exists with this email', 400));
-//   }
-
-//   const user = await User.create(req.body);
-
-//   sendTokenResponse(user, 201, res); 
-// });
-//______________________
-
-
-
-
-
-//{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}
-
-
+import bcrypt from 'bcrypt';
 
 export const registerUser = asynchandler(async (req, res, next) => {
-  const { email, firstName, lastName, role,specialization ,password} = req.body;
-   console.log(req.body);
+  console.log(req.body)
+  const { firstName, lastName, email, password, role } = req.body
 
   if (role === 'admin') {
     return next(new AppError('You are not allowed to register as admin', 403));
   }
-
-  const existing = await User.findOne({ email });
-  if (existing) {
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
     return next(new AppError('User already exists with this email', 400));
   }
 
+  const hashedPassword = bcrypt.hashSync(password, parseInt(process.env.SALTROUND));
+
+  const userData = { firstName, lastName, email, password: hashedPassword, role };
+  if (role === 'instructor') {
+    userData.specialization = req.body.specialization;
+  }
+  const newUser = new User(userData);
+
   const token = jwt.sign(
-    { email, firstName, lastName, role,password,specialization},
+    { id: newUser._id },
     process.env.JWT_SECRET,
   );
 
-  const protocol = req.protocol;
-  const host = req.get('host');  
-  const confirmUrl = `${protocol}://${host}/api/auth/confirm-email/${token}`;
+  const confirmLink = `${req.protocol}://${req.headers.host}${process.env.BASEURL}/auth/confirmEmail/${token}`
+  console.log(confirmLink);
+  
+  const message = `<a href="${confirmLink}">Confirm your email</a>`;
 
-  await sendEmail(
-    email,
-    'Confirm Your Email',
-    `Please confirm your email by clicking this link:\n\n${confirmUrl}`
-  );
+  const info = await sendEmail(req.body.email, 'Confirm Email', message);
 
-  res.status(200).json({
-    success: true,
-    message: 'Confirmation email sent. Please check your inbox.'
-  });
+  if (info?.accepted?.length) {
+    const savedUser = await newUser.save();
+    res.status(201).json({
+      message: 'Registration successful. Please confirm your email.',
+      userId: savedUser._id
+    });
+  } else {
+    return next(new AppError('Email was rejected by the server', 500));
+  }
 });
-
-
 
 
 export const confirmEmail = asynchandler(async (req, res, next) => {
   const { token } = req.params;
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_EMAIL_SECRET);
-    const { email, firstName, lastName, role, specialization, password } = decoded;
-
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return next(new AppError('User already exists', 400));
-    }
-
-    const user = await User.create({
-      email,
-      firstName,
-      lastName,
-      role,
-      specialization,
-      password
-    });
-
-    sendTokenResponse(user, 201, res);
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
     return next(new AppError('Invalid or expired token', 400));
   }
+
+  const user = await User.findById(decoded.id);
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  if (user.confirmed) {
+    return res.status(400).json({ message: 'Email already confirmed' });
+  }
+
+  user.confirmed = true;
+  await user.save();
+
+  res.status(200).json({ message: 'Email confirmed successfully' });
 });
 
 
-
-
-
-
-
-
-
-
-
-
-
-//{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
-
-
-export const loginUser = async (req, res) => {
+export const loginUser = async (req, res, next) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email }).select('+password');
+  console.log('Password from DB:', user?.password);
+  console.log(user);
 
-  if (!user || !(await user.matchPassword(password))) {
+
+
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'User not found' });
+  }
+  const isMatch = bcrypt.compareSync(password, user.password);
+
+  if (!isMatch) {
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+
+  if (!user.confirmed) {
+    return res.status(403).json({
+      success: false,
+      message: 'Please confirm your email before logging in.',
+    });
   }
 
   if (user.isBlocked) {
@@ -137,12 +115,10 @@ export const loginUser = async (req, res) => {
 };
 
 
-
-// @route   POST /api/v1/auth/forgot-password
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
-  
+
   const user = await User.findOne({ email });
   if (!user) {
     return res.status(404).json({ success: false, message: 'User not found' });
@@ -169,13 +145,7 @@ export const forgotPassword = async (req, res) => {
 };
 
 
-                                                                                                              
-
-
-
-
-
-export const  verifyResetCode = async (req, res) => {
+export const verifyResetCode = async (req, res) => {
   try {
     const { code } = req.body;
 
@@ -194,9 +164,10 @@ export const  verifyResetCode = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired code.' });
     }
 
-    return res.status(200).json({success: true,
-  message: 'Code verified successfully',
-      userData:user
+    return res.status(200).json({
+      success: true,
+      message: 'Code verified successfully',
+      userData: user
     });
 
   } catch (error) {

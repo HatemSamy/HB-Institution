@@ -66,14 +66,7 @@ const courseSchema = new mongoose.Schema({
 
 
 
-courseSchema.pre('remove', async function (next) {
-  try {
-    await this.model('Chapter').deleteMany({ _id: { $in: this.chapters } });
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
+
 
 const Course = model('Course', courseSchema);
 export default Course;

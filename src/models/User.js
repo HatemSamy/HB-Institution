@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
 
  lastName: {
     type: String,
-    required: [true, 'Please add a first name'],
+    required: [true, 'Please add a lastName '],
     trim: true,
     maxlength: [25, 'First name cannot be more than 25 characters']
   },
@@ -43,10 +43,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'default-avatar.jpg'
   },
- 
-  isActive: {
+  
+  confirmed: {
     type: Boolean,
-    default: true
+    default: false
   },
   isBlocked: {
     type: Boolean,
@@ -65,14 +65,14 @@ const userSchema = new mongoose.Schema({
 });
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    next();
-  }
+// userSchema.pre('save', async function(next) {
+//   if (!this.isModified('password')) {
+//     next();
+//   }
   
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-});
+//   const salt = await bcrypt.genSalt(10);
+//   this.password = bcrypt.hashSync(this.password, salt);
+// });
 
 // Sign JWT and return
 userSchema.methods.getSignedJwtToken = function() {
@@ -84,9 +84,9 @@ userSchema.methods.getSignedJwtToken = function() {
 };
 
 // Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
+// userSchema.methods.matchPassword = async function(enteredPassword) {
+//   return  bcrypt.compareSync(enteredPassword, this.password);
+// };
 
 // Generate and hash password reset token
 userSchema.methods.getResetPasswordToken = function() {

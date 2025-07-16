@@ -12,6 +12,8 @@ import categoryRoutes from './src/routes/categoryRouter.js';
 import groupRoutes from './src/routes/groupRouter.js';
 import unitRoutes from './src/routes/unitRoutes.js';
 import lessonRoutes from './src/routes/lessonRouter.js';
+import ClassSelectionRoutes from './src/routes/ClassSelectionRouter.js';
+
 import { globalErrorHandling } from './src/middleware/erroeHandling.js'
 
 
@@ -56,6 +58,8 @@ const baseUrl = process.env.BASEURL
 
 app.use(`${baseUrl}/auth`, authRoutes);
 app.use(`${baseUrl}/courses`,courseRoutes);
+app.use(`${baseUrl}/ClassSelection`,ClassSelectionRoutes);
+
 app.use(`${baseUrl}/category`,categoryRoutes);
 app.use(`${baseUrl}/group`,groupRoutes);
 app.use(`${baseUrl}/unit`,unitRoutes);
