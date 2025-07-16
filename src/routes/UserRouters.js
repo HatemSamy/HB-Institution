@@ -1,5 +1,5 @@
 import express from 'express';
-import * as UserController from '../controllers/temp.js';
+import * as UserController from '../controllers/UserController.js';
 
 import { authorize, protect } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
