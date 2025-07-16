@@ -28,7 +28,7 @@ export const blockUser = asynchandler(async (req, res, next) => {
 });
 
 
-
+// getInstructors
 export const getInstructors = asynchandler(async (req, res) => {
   const instructors = await User.find({ role: 'instructor'}).select('-password');
 
