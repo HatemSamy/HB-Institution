@@ -83,10 +83,6 @@ userSchema.methods.getSignedJwtToken = function() {
   );
 };
 
-// Match user entered password to hashed password in database
-// userSchema.methods.matchPassword = async function(enteredPassword) {
-//   return  bcrypt.compareSync(enteredPassword, this.password);
-// };
 
 // Generate and hash password reset token
 userSchema.methods.getResetPasswordToken = function() {
