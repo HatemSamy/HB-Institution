@@ -194,13 +194,9 @@ export const deleteUnit = asynchandler(async (req, res) => {
 export const toggleUnitLock = asynchandler(async (req, res, next) => {
   const { id } = req.params;
 
-  const unit = await Unit.findById(id);
+  const unit = await Unit.findById(id).select('title locked Completed');
   if (!unit) {
     return next(new AppError('Unit not found', 404));
-  }
-
-  if (unit.CreatedBy.toString() !== req.user._id.toString()) {
-    return next(new AppError('Not authorized to lock/unlock this unit', 403));
   }
 
   unit.lock = !unit.lock;

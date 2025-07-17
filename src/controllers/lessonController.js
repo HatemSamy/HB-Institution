@@ -202,7 +202,7 @@ export const toggleLessonLock = asynchandler(async (req, res) => {
  
     const { lessonId } = req.params;
   
-    const lesson = await Lesson.findById(lessonId);
+    const lesson = await Lesson.findById(lessonId).select('title completed islocked');
     if (!lesson) {
     throw new AppError('Lesson not found', 404);
     }
@@ -212,7 +212,8 @@ export const toggleLessonLock = asynchandler(async (req, res) => {
     
     res.status(200).json({
       message: `Lesson ${lesson.islocked ? 'locked' : 'unlocked'} successfully`,
-      islocked: lesson.islocked
+      islocked: lesson.islocked,
+      data:lesson
     });
     
   
@@ -224,7 +225,7 @@ export const toggleLessonLock = asynchandler(async (req, res) => {
 export const updateLesson = asynchandler(async (req, res, next) => {
   const { lessonId } = req.params;
 
-  // 1. Find the lesson and verify ownership
+
   const lesson = await Lesson.findById(lessonId)
     .populate({
       path: 'unitId',
@@ -260,13 +261,7 @@ export const updateLesson = asynchandler(async (req, res, next) => {
 
   res.json({
     success: true,
-    data: {
-      _id: updatedLesson._id,
-      title: updatedLesson.title,
-      order: updatedLesson.order,
-      unitId: updatedLesson.unitId,
-      updatedAt: updatedLesson.updatedAt
-    }
+    data:updatedLesson
   });
 });
 

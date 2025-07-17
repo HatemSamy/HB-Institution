@@ -14,8 +14,18 @@ router.route('/')
 
 router.route('/:lessonId')
   .get(lessonController.getLessonDetails)
-  .patch(protect, validation(lessonValidator.updateLessonSchema), lessonController.updateLesson)
-  .delete(protect, authorize(AccessRoles.instructor), lessonController.deleteLesson);
+  .patch(
+    protect,
+    authorize(AccessRoles.Admin),
+    validation(lessonValidator.updateLessonSchema),
+    lessonController.updateLesson
+  )
+  .delete(
+    protect,
+    authorize(AccessRoles.Admin),
+    lessonController.deleteLesson
+  );
+
   // Add the toggle lock as a separate route
 router.patch(
   '/:lessonId/toggle-lock',
