@@ -7,15 +7,15 @@ import Unit from "../models/Unit.js";
 
 
 const verifyUnitAccess = async (unitId, courseId) => {
-  const unit = await Unit.findOne({ _id: unitId, courseId });
+  const unit = await Unit.findOne({ _id: unitId });
   
   if (!unit) throw new AppError('Unit not found in your course');
   return unit;
 };
 export const createLesson = asynchandler(async (req, res, next) => {
-  const { unitId,courseId } = req.body;
+  const { unitId } = req.body;
  
-  await verifyUnitAccess(unitId, courseId);
+  await verifyUnitAccess(unitId);
 
   // 1. Find the highest order number in this unit
   const lastLesson = await Lesson.findOne({ unitId })

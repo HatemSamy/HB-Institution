@@ -8,7 +8,10 @@ import { AccessRoles } from '../utils/helpers.js';
 const router = express.Router();
 
 router.get('/instructors', protect,authorize(AccessRoles.Admin),UserController.getInstructors);
+router.get('/InstructorDashboardData', protect,authorize(AccessRoles.instructor),UserController.getInstructorDashboard);
+router.get('/StudentDashboardData', protect,authorize(AccessRoles.Student), UserController.getStudentDashboardData); 
 router.patch('/:userId', protect,authorize(AccessRoles.Admin),UserController.blockUser);
+
 
 
 export default router;

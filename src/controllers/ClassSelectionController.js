@@ -2,6 +2,7 @@ import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import ClassSelectionModel from "../models/ClassSelection.js";
 import Group from "../models/Group.js";
 import { sendEmail } from "../utils/email.js";
+import mongoose from 'mongoose';
 
 
 
@@ -98,6 +99,11 @@ export const ClassSelection = asynchandler(async (req, res) => {
     });
   } 
 );
+
+
+
+
+
 
 
 

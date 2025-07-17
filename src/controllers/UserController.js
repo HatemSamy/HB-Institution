@@ -1,5 +1,8 @@
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import User from "../models/User.js";
+import  Group  from '../models/Group.js';
+import mongoose from 'mongoose';
+import ClassSelectionModel from "../models/ClassSelection.js";
 
 
 
@@ -36,6 +39,132 @@ export const getInstructors = asynchandler(async (req, res) => {
     success: true,
     results: instructors.length,
     data: instructors
+  });
+});
+
+
+
+export const getInstructorDashboard = asynchandler(async (req, res, next) => {
+  const instructorId = req.user._id; 
+console.log('Instructor ID:', req.user._id);
+
+const dashboardData = await Group.aggregate([
+  {
+    $match: {
+      instructorId: new mongoose.Types.ObjectId(instructorId)
+    }
+  },
+  {
+    $lookup: {
+      from: 'courses',
+      localField: 'courseId',
+      foreignField: '_id',
+      as: 'course'
+    }
+  },
+  {
+    $unwind: '$course'
+  },
+  {
+    $project: {
+      _id: 1,
+      code: 1,
+      level: 1,
+      maxStudents: 1,
+      currentStudents: 1,
+      schedule: 1,
+      course: {
+        _id: 1,
+        title: 1,
+        price: 1,
+        duration: 1,
+        image: 1
+      }
+    }
+  }
+]);
+
+res.status(200).json({
+  success: true,
+  message: "Instructor dashboard data",
+  data: dashboardData
+});
+
+});
+
+
+
+export const getStudentDashboardData = asynchandler(async (req, res, next) => {
+  const studentId  = req.user._id;
+    console.log(studentId);
+
+  const data = await ClassSelectionModel.aggregate([
+    { $match: { studentId: new mongoose.Types.ObjectId(studentId), status: 'confirmed' } },
+
+    {
+      $lookup: {
+        from: 'courses',
+        localField: 'courseId',
+        foreignField: '_id',
+        as: 'course'
+      }
+    },
+    { $unwind: '$course' },
+
+    {
+      $lookup: {
+        from: 'units',
+        localField: 'courseId',
+        foreignField: 'courseId',
+        as: 'units'
+      }
+    },
+
+    {
+      $unwind: {
+        path: '$units',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    {
+      $lookup: {
+        from: 'lessons',
+        localField: 'units._id',
+        foreignField: 'unitId',
+        as: 'units.lessons'
+      }
+    },
+
+    {
+      $group: {
+        _id: '$course._id',
+        courseTitle: { $first: '$course.title' },
+        courseImage: { $first: '$course.image' },
+        duration: { $first: '$course.duration' },
+        price: { $first: '$course.price' },
+        units: {
+          $push: {
+            _id: '$units._id',
+            title: '$units.title',
+            description: '$units.description',
+            lock: '$units.lock',
+            completed: '$units.Completed',
+            lessons: '$units.lessons'
+          }
+        }
+      }
+    }
+  ]);
+
+  if (!data.length) {
+    return next(new AppError('No enrolled courses found for this student.', 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Dashboard data fetched successfully',
+    data
   });
 });
 

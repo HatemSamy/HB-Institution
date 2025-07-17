@@ -60,7 +60,7 @@ const lessonSchema = new Schema({
 });
 
 // Virtual population to get course through unit
-lessonSchema.virtual('course', {
+lessonSchema.virtual('unit', {
   ref: 'Unit',
   localField: 'unitId',
   foreignField: '_id',

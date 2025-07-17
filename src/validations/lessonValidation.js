@@ -52,8 +52,6 @@ export const createLessonSchema = {
     description: Joi.string().trim().required().min(10).max(500),
     content: Joi.string().trim().required().min(20),
     unitId: Joi.string().hex().length(24).required(),
-    courseId: Joi.string().hex().length(24).required(),
-
     
   })
 };
