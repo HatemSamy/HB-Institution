@@ -12,6 +12,8 @@ const router = express.Router({ mergeParams: true });
 router.route('/')
   .post(protect, validation(lessonValidator.createLessonSchema), lessonController.createLesson);
 
+router.get('/calendar',protect,authorize(AccessRoles.general) ,lessonController.getStudentWeeklySchedule);
+
 router.route('/:lessonId')
   .get(lessonController.getLessonDetails)
   .patch(
@@ -41,6 +43,11 @@ router.patch(
   authorize(AccessRoles.instructor),
   lessonController.markLessonAsCompleted
 );
+
+
+
+
+
 
 
 export default router;

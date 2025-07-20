@@ -79,11 +79,7 @@ export const loginUser = async (req, res, next) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email }).select('+password');
-  console.log('Password from DB:', user?.password);
-  console.log(user);
-
-
-
+ 
   if (!user) {
     return res.status(401).json({ success: false, message: 'User not found' });
   }

@@ -1,8 +1,8 @@
 import { asynchandler ,AppError} from "../middleware/erroeHandling.js";
+import ClassSelectionModel from "../models/ClassSelection.js";
 import Lesson from "../models/Lesson.js";
 import Unit from "../models/Unit.js";
-
-
+import moment from 'moment-timezone';
 
 
 
@@ -113,14 +113,6 @@ export const getLessonDetails = asynchandler(async (req, res, next) => {
 res.status(201).json({message:'Lesson Details ',lesson});
 
 });
-
-
-
-
-
-
-
-
 
 
 export const deleteLesson = asynchandler(async (req, res, next) => {
@@ -265,3 +257,121 @@ export const updateLesson = asynchandler(async (req, res, next) => {
   });
 });
 
+
+
+// export const getNextLessonsCalendar = asynchandler(async (req, res) => {
+//   const studentId = req.user._id;
+
+//   // Get class selection
+//   const classSelection = await ClassSelectionModel.findOne({ studentId, status: 'confirmed' }).populate('groupId');
+
+//   if (!classSelection || !classSelection.groupId) {
+//     return res.status(404).json({ message: 'No confirmed group found for this student' });
+//   }
+
+//   const schedule = classSelection.groupId.schedule;
+
+//   const today = moment().tz('UTC'); 
+//   const upcomingLessons = [];
+
+//   // Loop through the next 7 days
+//   for (let i = 0; i < 7; i++) {
+//     const currentDay = today.clone().add(i, 'days');
+//     const dayName = currentDay.format('dddd');
+
+//     const daySchedule = schedule.find(s => s.dayOfWeek === dayName);
+//     if (daySchedule) {
+//       const lessonDate = currentDay.format('YYYY-MM-DD');
+//       upcomingLessons.push({
+//         day: dayName,
+//         date: lessonDate,
+//         startTime: daySchedule.startTime,
+//         endTime: daySchedule.endTime,
+//         timezone: daySchedule.timezone || 'UTC'
+//       });
+//     }
+//   }
+
+//   res.json({ upcomingLessons });
+// });
+
+
+
+export const getCalendarForStudent = asynchandler(async (req, res) => {
+  const studentId = req.user._id;
+
+  const classSelection = await ClassSelectionModel.findOne({ studentId, status: 'confirmed' }).populate('groupId');
+  if (!classSelection || !classSelection.groupId) {
+    return res.status(404).json({ message: 'No confirmed group found for this student' });
+  }
+
+  const schedule = classSelection.groupId.schedule;
+  const timezone = schedule[0]?.timezone || 'UTC';
+
+  const today = moment().tz(timezone);
+  const calendarEvents = [];
+
+  for (let i = 0; i < 30; i++) {
+    const currentDay = today.clone().add(i, 'days');
+    const currentDayName = currentDay.format('dddd');
+
+    const matchedSchedule = schedule.find(s => s.dayOfWeek === currentDayName);
+    if (matchedSchedule) {
+      const start = moment.tz(`${currentDay.format('YYYY-MM-DD')}T${matchedSchedule.startTime}`, timezone);
+      const end = moment.tz(`${currentDay.format('YYYY-MM-DD')}T${matchedSchedule.endTime}`, timezone);
+
+      calendarEvents.push({
+        title: 'Live Class',
+        date: currentDay.format('YYYY-MM-DD'),
+        startTime: matchedSchedule.startTime,
+        endTime: matchedSchedule.endTime,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        timezone
+      });
+    }
+  }
+
+  res.status(200).json({'calendarEvents':calendarEvents });
+});
+
+
+
+
+
+
+
+export const getStudentWeeklySchedule =asynchandler (async (req, res) => {
+  
+  const studentId = req.user._id;
+    const selections = await ClassSelectionModel.find({ studentId, status: 'confirmed' })
+      .populate('courseId', 'title')
+      .populate('instructorId', 'fullName');
+
+    const calendarEvents = [];
+
+    const startOfWeek = moment().startOf('week'); 
+    
+    for (const selection of selections) {
+      for (const slot of selection.selectedSchedule) {
+        const { dayOfWeek, startTime, endTime, timezone } = slot;
+
+        const dayIndex = moment().day(dayOfWeek).day(); 
+        const lessonDate = startOfWeek.clone().day(dayIndex);
+
+        const scheduleItem = {
+          course: selection.courseId.title,
+          instructor: selection.instructorId.fullName,
+          day: dayOfWeek,
+          date: lessonDate.format('YYYY-MM-DD'),
+          time: `${startTime} - ${endTime}`,
+          timezone: timezone || 'Africa/Cairo',
+        };
+
+        calendarEvents.push(scheduleItem);
+      }
+    }
+
+    res.json({'calendarEvents':calendarEvents });
+  
+});
