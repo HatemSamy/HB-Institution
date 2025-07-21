@@ -49,6 +49,7 @@ export const registerUser = asynchandler(async (req, res, next) => {
 });
 
 
+
 export const confirmEmail = asynchandler(async (req, res, next) => {
   const { token } = req.params;
 
@@ -65,14 +66,15 @@ export const confirmEmail = asynchandler(async (req, res, next) => {
   }
 
   if (user.confirmed) {
-    return res.status(400).json({ message: 'Email already confirmed' });
+    return res.redirect(`${process.env.FRONTEND_URL}/login?message=alreadyConfirmed`);
   }
 
   user.confirmed = true;
   await user.save();
 
-  res.status(200).json({ message: 'Email confirmed successfully' });
+  res.redirect(`${process.env.FRONTEND_URL}/login?message=confirmed`);
 });
+
 
 
 export const loginUser = async (req, res, next) => {
