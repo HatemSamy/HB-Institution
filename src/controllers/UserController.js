@@ -3,9 +3,7 @@ import User from "../models/User.js";
 import  Group  from '../models/Group.js';
 import mongoose from 'mongoose';
 import ClassSelectionModel from "../models/ClassSelection.js";
-
-
-
+import cloudinary from "../utils/cloudinary.js";
 
 
 export const blockUser = asynchandler(async (req, res, next) => {
@@ -167,5 +165,40 @@ export const getStudentDashboardData = asynchandler(async (req, res, next) => {
     data
   });
 });
+
+
+
+export const updateProfile = asynchandler(async (req, res, next) => {
+  const userId = req.user._id;
+  const user = await User.findById(userId);
+  if (!user) return next(new AppError('User not found', 404));
+
+  if (req.file) {
+    const file = req.file;
+    const { secure_url} = await cloudinary.uploader.upload(file.path, {
+      folder: `HB-Institution/Users/${userId}`,
+    });
+    req.body.avatar = secure_url;
+  }
+  const updatedFields = {};
+  for (let key of ['firstName', 'lastName', 'phoneNumber', 'avatar']) {
+    if (req.body[key]) updatedFields[key] = req.body[key];
+  }
+
+const updatedUser = await User.findByIdAndUpdate(userId, updatedFields, {
+    new: true,
+    select: 'firstName lastName phoneNumber avatar' 
+  });
+
+  res.status(200).json({ message: 'Profile updated', user: updatedUser });
+});
+
+
+
+
+
+
+
+
 
 

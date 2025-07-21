@@ -1,14 +1,9 @@
 
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
-import Chapter from '../models/Unit.js';
 import Course from "../models/Course.js";
-import mongoose from "mongoose";
-import User from "../models/User.js";
 import Group from "../models/Group.js";
 import CategoryModel from "../models/category.js";
 import Unit from "../models/Unit.js";
-import ClassSelectionModel from "../models/ClassSelection.js";
-import { sendEmail } from "../utils/email.js";
 import cloudinary from "../utils/cloudinary.js";
 
 export const createCourse = (async (req, res, next) => {
@@ -207,11 +202,6 @@ export const getTimeSlotsForGroup  = asynchandler(async (req, res) => {
     });
   }
 });
-
-
-
-
-
 
 
 export const approveCourse = asynchandler(async (req, res, next) => {

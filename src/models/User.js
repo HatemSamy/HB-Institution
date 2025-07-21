@@ -43,6 +43,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'default-avatar.jpg'
   },
+
+   phoneNumber: {
+    type: String,
+  },
   
   confirmed: {
     type: Boolean,

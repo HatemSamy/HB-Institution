@@ -197,3 +197,25 @@ export const resetPassword = async (req, res) => {
 };
 
 
+
+export const updatePassword = asynchandler(async (req, res, next) => {
+  const userId = req.user._id; 
+  const { currentPassword, newPassword } = req.body;
+
+  const user = await User.findById(userId).select('+password firstName email role');
+  console.log(user);
+  
+  if (!user){ 
+    return next(new AppError('User not found', 404));
+}
+  const isMatch = bcrypt.compareSync(currentPassword, user.password);
+  if (!isMatch) {
+    return next(new AppError('Incorrect current password', 400));
+  }
+  const hashedPassword = bcrypt.hashSync(newPassword, parseInt(process.env.SALTROUND));
+
+  user.password = hashedPassword;
+  await user.save();
+
+  res.status(200).json({ message: 'Password updated successfully' });
+});

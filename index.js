@@ -62,7 +62,6 @@ const baseUrl = process.env.BASEURL
 app.use(`${baseUrl}/auth`, authRoutes);
 app.use(`${baseUrl}/courses`,courseRoutes);
 app.use(`${baseUrl}/ClassSelection`,ClassSelectionRoutes);
-
 app.use(`${baseUrl}/category`,categoryRoutes);
 app.use(`${baseUrl}/group`,groupRoutes);
 app.use(`${baseUrl}/unit`,unitRoutes);
