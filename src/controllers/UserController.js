@@ -196,9 +196,22 @@ const updatedUser = await User.findByIdAndUpdate(userId, updatedFields, {
 
 
 
+export const getProfile = asynchandler(async (req, res, next) => {
+  const userId = req.user._id;
 
+  const user = await User.findById(userId).select(
+    'firstName lastName email phoneNumber avatar  specialization'
+  );
 
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
 
+  res.status(200).json({
+    message: 'User profile fetched successfully',
+    user,
+  });
+});
 
 
 

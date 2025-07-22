@@ -11,7 +11,8 @@ const router = express.Router();
 router.get('/instructors', protect,authorize(AccessRoles.Admin),UserController.getInstructors);
 router.get('/InstructorDashboardData', protect,authorize(AccessRoles.instructor),UserController.getInstructorDashboard);
 router.get('/StudentDashboardData', protect,authorize(AccessRoles.Student), UserController.getStudentDashboardData); 
-router.patch('/:userId', protect,authorize(AccessRoles.Admin),UserController.blockUser);
+router.get('/profile', protect, UserController.getProfile);
+
 
 router.put(
   '/update-profile',
@@ -20,6 +21,8 @@ router.put(
   HME,
   UserController.updateProfile
 );
+
+router.patch('/:userId', protect,authorize(AccessRoles.Admin),UserController.blockUser);
 
 
 export default router;
