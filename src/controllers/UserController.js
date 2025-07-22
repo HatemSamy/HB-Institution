@@ -200,7 +200,7 @@ export const getProfile = asynchandler(async (req, res, next) => {
   const userId = req.user._id;
 
   const user = await User.findById(userId).select(
-    'firstName lastName email phoneNumber avatar  specialization'
+    'firstName lastName email phoneNumber avatar role  specialization'
   );
 
   if (!user) {
