@@ -19,6 +19,6 @@ router.post('/', protect, Multer(fileValidation.image).single('image'), HME, cat
 
 
 
-router.delete('/:id', protect,authorize(AccessRoles.instructor), categoryController.deleteCategory);
+router.delete('/:id', protect,authorize(AccessRoles.Admin), categoryController.deleteCategory);
 
 export default router;
