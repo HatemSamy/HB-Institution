@@ -33,6 +33,24 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'instructor', 'admin'],
     default: 'student'
   },
+  availableTime: {
+  type: Map,
+  of: {
+    from: {
+      type: Number,
+      min: 0,
+      max: 23
+    },
+    to: {
+      type: Number,
+      min: 0,
+      max: 23
+    }
+  },
+  default: {} 
+},
+
+
 
   specialization: [{
     type: String,

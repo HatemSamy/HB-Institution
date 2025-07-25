@@ -215,3 +215,29 @@ export const getProfile = asynchandler(async (req, res, next) => {
 
 
 
+export const setInstructorAvailability = asynchandler(async (req, res, next) => {
+  const { userId, day } = req.params;
+  const { from, to } = req.body;
+
+  const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  if (!validDays.includes(day.toLowerCase())) {
+    return next(new AppError('Invalid day provided', 400));
+  }
+
+  if (from == null || to == null || from < 0 || to > 23 || from >= to) {
+    return next(new AppError('Invalid time range', 400));
+  }
+
+  const user = await User.findById(userId);
+  if (!user) return next(new AppError('User not found', 404));
+  if (user.role !== 'instructor') return next(new AppError('Only instructors can have availability times', 400));
+
+  user.availableTime.set(day.toLowerCase(), { from, to });
+  await user.save();
+
+  res.status(200).json({ 
+    message: `Availability for ${day} updated`, 
+    availableTime: user.availableTime 
+  });
+});
+

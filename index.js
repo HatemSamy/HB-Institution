@@ -13,6 +13,8 @@ import groupRoutes from './src/routes/groupRouter.js';
 import unitRoutes from './src/routes/unitRoutes.js';
 import userRoutes from './src/routes/UserRouters.js';
 import newsRoutes from './src/routes/NewsRouter.js';
+import ContactRoutes from './src/routes/Contac.js';
+
 
 import lessonRoutes from './src/routes/lessonRouter.js';
 import ClassSelectionRoutes from './src/routes/ClassSelectionRouter.js';
@@ -68,6 +70,8 @@ app.use(`${baseUrl}/unit`,unitRoutes);
 app.use(`${baseUrl}/user`,userRoutes);
 app.use(`${baseUrl}/lesson`,lessonRoutes);
 app.use(`${baseUrl}/news`,newsRoutes);
+app.use(`${baseUrl}/Contact`,ContactRoutes);
+
 
 
 
