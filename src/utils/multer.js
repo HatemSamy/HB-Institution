@@ -99,23 +99,3 @@ export function Multer(customValidation=fileValidation.image) {
 
 
 
-
-export const uploadToCloudinary = (buffer, filename, folder, resource_type = 'auto') => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type,
-        public_id: filename,
-        use_filename: true,
-        unique_filename: false,
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result.secure_url);
-      }
-    );
-
-    streamifier.createReadStream(buffer).pipe(stream);
-  });
-};

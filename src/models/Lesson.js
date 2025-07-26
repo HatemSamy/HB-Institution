@@ -18,14 +18,16 @@ const lessonSchema = new Schema({
     type: Number,
     required: true
   },
-  resources: [{
-    title: String,
-    url: String,
+resources: {
+    url: { type: String, required: true },
+    public_id: { type: String, required: true },
     type: {
       type: String,
-      enum: ['pdf', 'doc', 'ppt', 'zip', 'other']
-    }
-  }],
+      enum: ['pdf', 'doc', 'ppt', 'zip', 'other'],
+      default: 'pdf'
+    },
+    filename: { type: String } // Optional: store original filename
+  },
   unitId: {
     type: Types.ObjectId,
     ref: 'Unit',
@@ -59,7 +61,7 @@ const lessonSchema = new Schema({
   toObject: { virtuals: true }
 });
 
-// Virtual population to get course through unit
+
 lessonSchema.virtual('unit', {
   ref: 'Unit',
   localField: 'unitId',
@@ -68,7 +70,6 @@ lessonSchema.virtual('unit', {
   options: { select: 'courseId' }
 });
 
-// Indexes
 lessonSchema.index({ unitId: 1, order: 1 });
 
 const Lesson = model('Lesson', lessonSchema);

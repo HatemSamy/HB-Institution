@@ -1,49 +1,50 @@
-import { asynchandler ,AppError} from "../middleware/erroeHandling.js";
+import { asynchandler, AppError } from "../middleware/erroeHandling.js";
 import ClassSelectionModel from "../models/ClassSelection.js";
 import Lesson from "../models/Lesson.js";
 import Unit from "../models/Unit.js";
 import moment from 'moment-timezone';
-
+import cloudinary from "../utils/cloudinary.js";
+import { getFileType } from "../utils/helpers.js";
+import path from 'path';
 
 
 const verifyUnitAccess = async (unitId, courseId) => {
   const unit = await Unit.findOne({ _id: unitId });
-  
+
   if (!unit) throw new AppError('Unit not found in your course');
   return unit;
 };
-export const createLesson = asynchandler(async (req, res, next) => {
-  const { unitId } = req.body;
- 
-  await verifyUnitAccess(unitId);
+// export const createLesson = asynchandler(async (req, res, next) => {
+//   const { unitId } = req.body;
 
-  // 1. Find the highest order number in this unit
-  const lastLesson = await Lesson.findOne({ unitId })
-    .sort('-order')
-    .select('order')
-    .lean();
+//   await verifyUnitAccess(unitId);
 
-  const nextOrder = lastLesson ? lastLesson.order + 1 : 1;
-  const lesson = await Lesson.create({
-    ...req.body,
-    order: nextOrder,
-    islocked: nextOrder !== 1 
-  });
+//   const lastLesson = await Lesson.findOne({ unitId })
+//     .sort('-order')
+//     .select('order')
+//     .lean();
 
-  res.status(201).json({
-    success: true,
-    message: "Lesson created successfully",
-    data: {
-      id: lesson._id,
-      title: lesson.title,
-      description: lesson.description,
-      order: lesson.order, // Will show auto-assigned order
-      unitId: lesson.unitId,
-      islocked: lesson.islocked,
-      createdAt: lesson.createdAt
-    }
-  });
-});
+//   const nextOrder = lastLesson ? lastLesson.order + 1 : 1;
+//   const lesson = await Lesson.create({
+//     ...req.body,
+//     order: nextOrder,
+//     islocked: nextOrder !== 1 
+//   });
+
+//   res.status(201).json({
+//     success: true,
+//     message: "Lesson created successfully",
+//     data: {
+//       id: lesson._id,
+//       title: lesson.title,
+//       description: lesson.description,
+//       order: lesson.order, 
+//       unitId: lesson.unitId,
+//       islocked: lesson.islocked,
+//       createdAt: lesson.createdAt
+//     }
+//   });
+// });
 
 
 
@@ -54,14 +55,14 @@ export const getUnitWithLessons = asynchandler(async (req, res, next) => {
 
   const unit = await Unit.findById(unitId)
     .populate('courseId', 'title');
-  
+
   if (!unit) {
     throw new AppError('Unit not found', 404);
   }
 
   const lessons = await Lesson.find({ unitId })
     .sort('order')
-    .select('-__v'); 
+    .select('-__v');
 
   const response = {
     unit: {
@@ -104,13 +105,13 @@ export const getLessonDetails = asynchandler(async (req, res, next) => {
         select: 'title _id'
       }
     })
-    .select('-__v'); 
+    .select('-__v');
 
   if (!lesson) {
     throw new AppError('Lesson not found', 404);
   }
 
-res.status(201).json({message:'Lesson Details ',lesson});
+  res.status(201).json({ message: 'Lesson Details ', lesson });
 
 });
 
@@ -191,24 +192,24 @@ export const markLessonAsCompleted = asynchandler(async (req, res) => {
 
 
 export const toggleLessonLock = asynchandler(async (req, res) => {
- 
-    const { lessonId } = req.params;
-  
-    const lesson = await Lesson.findById(lessonId).select('title completed islocked');
-    if (!lesson) {
-    throw new AppError('Lesson not found', 404);
-    }
 
-    lesson.islocked = !lesson.islocked;
-    await lesson.save();
-    
-    res.status(200).json({
-      message: `Lesson ${lesson.islocked ? 'locked' : 'unlocked'} successfully`,
-      islocked: lesson.islocked,
-      data:lesson
-    });
-    
-  
+  const { lessonId } = req.params;
+
+  const lesson = await Lesson.findById(lessonId).select('title completed islocked');
+  if (!lesson) {
+    throw new AppError('Lesson not found', 404);
+  }
+
+  lesson.islocked = !lesson.islocked;
+  await lesson.save();
+
+  res.status(200).json({
+    message: `Lesson ${lesson.islocked ? 'locked' : 'unlocked'} successfully`,
+    islocked: lesson.islocked,
+    data: lesson
+  });
+
+
 });
 
 
@@ -253,7 +254,7 @@ export const updateLesson = asynchandler(async (req, res, next) => {
 
   res.json({
     success: true,
-    data:updatedLesson
+    data: updatedLesson
   });
 });
 
@@ -332,7 +333,7 @@ export const getCalendarForStudent = asynchandler(async (req, res) => {
     }
   }
 
-  res.status(200).json({'calendarEvents':calendarEvents });
+  res.status(200).json({ 'calendarEvents': calendarEvents });
 });
 
 
@@ -341,37 +342,102 @@ export const getCalendarForStudent = asynchandler(async (req, res) => {
 
 
 
-export const getStudentWeeklySchedule =asynchandler (async (req, res) => {
-  
+export const getStudentWeeklySchedule = asynchandler(async (req, res) => {
+
   const studentId = req.user._id;
-    const selections = await ClassSelectionModel.find({ studentId, status: 'confirmed' })
-      .populate('courseId', 'title')
-      .populate('instructorId', 'fullName');
+  const selections = await ClassSelectionModel.find({ studentId, status: 'confirmed' })
+    .populate('courseId', 'title')
+    .populate('instructorId', 'fullName');
 
-    const calendarEvents = [];
+  const calendarEvents = [];
 
-    const startOfWeek = moment().startOf('week'); 
-    
-    for (const selection of selections) {
-      for (const slot of selection.selectedSchedule) {
-        const { dayOfWeek, startTime, endTime, timezone } = slot;
+  const startOfWeek = moment().startOf('week');
 
-        const dayIndex = moment().day(dayOfWeek).day(); 
-        const lessonDate = startOfWeek.clone().day(dayIndex);
+  for (const selection of selections) {
+    for (const slot of selection.selectedSchedule) {
+      const { dayOfWeek, startTime, endTime, timezone } = slot;
 
-        const scheduleItem = {
-          course: selection.courseId.title,
-          instructor: selection.instructorId.fullName,
-          day: dayOfWeek,
-          date: lessonDate.format('YYYY-MM-DD'),
-          time: `${startTime} - ${endTime}`,
-          timezone: timezone || 'Africa/Cairo',
-        };
+      const dayIndex = moment().day(dayOfWeek).day();
+      const lessonDate = startOfWeek.clone().day(dayIndex);
 
-        calendarEvents.push(scheduleItem);
-      }
+      const scheduleItem = {
+        course: selection.courseId.title,
+        instructor: selection.instructorId.fullName,
+        day: dayOfWeek,
+        date: lessonDate.format('YYYY-MM-DD'),
+        time: `${startTime} - ${endTime}`,
+        timezone: timezone || 'Africa/Cairo',
+      };
+
+      calendarEvents.push(scheduleItem);
     }
+  }
 
-    res.json({'calendarEvents':calendarEvents });
-  
+  res.json({ 'calendarEvents': calendarEvents });
+
 });
+
+
+
+
+
+export const createLesson = asynchandler(async (req, res, next) => {
+  const { unitId } = req.body;
+  console.log(req.body);
+
+  const unit = await Unit.findById(unitId);
+  if (!unit) throw new AppError('Unit not found', 404);
+
+  const lastLesson = await Lesson.findOne({ unitId }).sort('-order').select('order').lean();
+  const nextOrder = lastLesson ? lastLesson.order + 1 : 1;
+
+  const lessonData = {
+    ...req.body,
+    order: nextOrder,
+    islocked: nextOrder !== 1,
+  };
+
+  if (req.file) {
+    try {
+
+      const fileName = path.parse(req.file.originalname).name;
+      const extension = path.extname(req.file.originalname); //
+     const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'HB-Institution/lessons',
+      resource_type: 'raw',
+      public_id: `HB-Institution/lessons/${fileName}`, 
+      use_filename: true, 
+      unique_filename: false, 
+    });
+      lessonData.resources = {
+        url: result.secure_url,
+        public_id: result.public_id,
+        type: getFileType(req.file.mimetype),
+        filename: req.file.originalname,
+      };
+
+    } catch (uploadError) {
+      console.error('Cloudinary upload error:', uploadError);
+      throw new AppError('Failed to upload resource file', 500);
+    }
+  }
+
+  const lesson = await Lesson.create(lessonData);
+
+  res.status(201).json({
+    success: true,
+    message: "Lesson created successfully",
+    data: {
+      id: lesson._id,
+      title: lesson.title,
+      description: lesson.description,
+      order: lesson.order,
+      resources: lesson.resources,
+      islocked: lesson.islocked,
+      completionCriteria: lesson.completionCriteria,
+      createdAt: lesson.createdAt,
+    },
+  });
+});
+
+

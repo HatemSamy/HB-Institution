@@ -214,30 +214,56 @@ export const getProfile = asynchandler(async (req, res, next) => {
 });
 
 
-
-export const setInstructorAvailability = asynchandler(async (req, res, next) => {
-  const { userId, day } = req.params;
-  const { from, to } = req.body;
-
-  const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-  if (!validDays.includes(day.toLowerCase())) {
-    return next(new AppError('Invalid day provided', 400));
+export const  setInstructorAvailability = asynchandler(async (req, res, next) => {
+  const {availableTime } = req.body;
+  const instructorId =req.params.instructorId
+  if (!instructorId || !availableTime) {
+    return next(new AppError('InstructorId and availableTime are required', 400));
   }
+  const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  
+  for (const [day, timeSlot] of Object.entries(availableTime)) {
+    if (!validDays.includes(day.toLowerCase())) {
+      return next(new AppError(`Invalid day: ${day}. Valid days are: ${validDays.join(', ')}`, 400));
+    }
 
-  if (from == null || to == null || from < 0 || to > 23 || from >= to) {
-    return next(new AppError('Invalid time range', 400));
+    if (typeof timeSlot.from !== 'number' || typeof timeSlot.to !== 'number' || 
+        timeSlot.from < 0 || timeSlot.from > 23 || timeSlot.to < 0 || timeSlot.to > 23) {
+      return next(new AppError(`Invalid time format for ${day}. Hours must be numbers between 0-23`, 400));
+    }
+
+    if (timeSlot.from >= timeSlot.to) {
+      return next(new AppError(`Invalid time range for ${day}. 'from' time must be before 'to' time`, 400));
+    }
   }
+  const instructor = await User.findById(instructorId);
+  if (!instructor) {
+    return next(new AppError('Instructor not found', 404));
+  }
+  if (!instructor.availableTime) {
+    instructor.availableTime = new Map();
+  }
+ 
+  for (const [day, timeSlot] of Object.entries(availableTime)) {
+    instructor.availableTime.set(day.toLowerCase(), timeSlot);
+  }
+  
+  await instructor.save();
 
-  const user = await User.findById(userId);
-  if (!user) return next(new AppError('User not found', 404));
-  if (user.role !== 'instructor') return next(new AppError('Only instructors can have availability times', 400));
+  // Convert Map back to object for response
+  const responseData = {
+    _id: instructor._id,
+    firstName: instructor.firstName,
+    lastName: instructor.lastName,
+    email: instructor.email,
+    role: instructor.role,
+    availableTime: Object.fromEntries(instructor.availableTime),
+  };
 
-  user.availableTime.set(day.toLowerCase(), { from, to });
-  await user.save();
-
-  res.status(200).json({ 
-    message: `Availability for ${day} updated`, 
-    availableTime: user.availableTime 
+  res.status(200).json({
+    success: true,
+    message: 'Instructor available time updated successfully',
+    data: responseData
   });
 });
 

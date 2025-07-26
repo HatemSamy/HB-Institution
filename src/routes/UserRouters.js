@@ -22,8 +22,8 @@ router.put(
   UserController.updateProfile
 );
 
-router.patch(
-  '/:userId/availability/:day',
+router.put(
+  '/:instructorId/availability',
   protect,
   authorize(AccessRoles.Admin),
   UserController.setInstructorAvailability

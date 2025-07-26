@@ -1,4 +1,5 @@
 import Course from "../models/Course.js";
+import { fileValidation } from "../services/multer.js";
 
 // Checks if a course is approved
 
@@ -131,6 +132,24 @@ export function isScheduleConflict(newSchedule, existingGroups) {
 
 
 
+export function getFileType(mimetype) {
+  if (fileValidation.pdf.includes(mimetype)) return 'pdf';
+  if (fileValidation.document.includes(mimetype)) return 'doc';
+  if (fileValidation.presentation.includes(mimetype)) return 'ppt';
+  if (fileValidation.archive.includes(mimetype)) return 'zip';
+  return 'other';
+}
 
 
 
+
+// Supported file types for lesson resources
+const resourceValidation = [
+    ...fileValidation.pdf,
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/zip',
+    'application/x-zip-compressed'
+];

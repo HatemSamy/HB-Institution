@@ -5,12 +5,17 @@ import * as lessonValidator from '../validations/lessonValidation.js';
 import { authorize, protect } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
 import { validation } from '../middleware/validation.js';
-
+import { fileValidation, Multer } from '../utils/multer.js';
+import { HME } from '../services/multer.js';
 const router = express.Router({ mergeParams: true });
 
 
-router.route('/')
-  .post(protect, validation(lessonValidator.createLessonSchema), lessonController.createLesson);
+// router.route('/')
+//   .post(protect, validation(lessonValidator.createLessonSchema), lessonController.createLesson);
+
+
+// POST /api/lessons - Create a new lesson with optional resource upload
+router.post('/',protect,Multer(fileValidation.pdf).single('resource'),validation(lessonValidator.createLessonSchema),HME,lessonController.createLesson);
 
 router.get('/calendar',protect,authorize(AccessRoles.general) ,lessonController.getStudentWeeklySchedule);
 
@@ -28,13 +33,7 @@ router.route('/:lessonId')
     lessonController.deleteLesson
   );
 
-  // Add the toggle lock as a separate route
-router.patch(
-  '/:lessonId/toggle-lock',
-  protect,
-  authorize(AccessRoles.instructor),
-  lessonController.toggleLessonLock
-);
+router.patch('/:lessonId/toggle-lock',protect, authorize(AccessRoles.instructor),lessonController.toggleLessonLock);
 
 
 router.patch(

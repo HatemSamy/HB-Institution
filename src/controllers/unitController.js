@@ -3,7 +3,7 @@ import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import Course from "../models/Course.js";
 import Lesson from "../models/Lesson.js";
 import Unit from "../models/Unit.js";
-import { uploadToCloudinary } from "../utils/multer.js";
+// import { uploadToCloudinary } from "../utils/multer.js";
 
 // export const createUnit = asynchandler(async (req, res, next) => {
   
