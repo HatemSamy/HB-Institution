@@ -4,6 +4,7 @@ import Group from "../models/Group.js";
 import { addHistory } from "../services/history.service.js";
 import { sendEmail } from "../utils/email.js";
 import mongoose from 'mongoose';
+import { HISTORY_ACTIONS } from "../utils/historyActions.js";
 
 
 
@@ -73,13 +74,16 @@ export const ClassSelection = asynchandler(async (req, res) => {
     const instructor = populatedSelection.instructorId;
     const groupData = populatedSelection.groupId;
 
- await addHistory({
-    userId: req.user.firstName,
-    action: HISTORY_ACTIONS.ENROLL_COURSE,
-    metadata: {
-      Course:course.title,
-    },
-  });
+await addHistory({
+  userId: req.user._id,
+  action: HISTORY_ACTIONS.ENROLL_COURSE,
+  metadata: {
+    UserName: `${student.firstName} ${student.lastName}`,
+    Course: course.title,
+    Instructor: `${instructor.firstName} ${instructor.lastName}`,
+    GroupCode: groupData.code 
+  }
+});
   
     const htmlMessage = `
       <h2>Class Selection Confirmation</h2>
@@ -104,11 +108,34 @@ export const ClassSelection = asynchandler(async (req, res) => {
 
     await sendEmail(student.email, 'Class Selection Confirmation', htmlMessage);
 
-    res.status(201).json({
-      success: true,
-      message: 'Class selection created and email sent successfully',
-      data: populatedSelection
-    });
+   res.status(201).json({
+  success: true,
+  message: 'Class selection created and email sent successfully',
+  data: {
+    _id: populatedSelection._id,
+    status: populatedSelection.status,
+    level: populatedSelection.level,
+    selectedSchedule: populatedSelection.selectedSchedule,
+    student: {
+      fullName: `${student.firstName} ${student.lastName}`,
+      email: student.email,
+    },
+    course: {
+      _id: course._id,
+      title: course.title,
+    },
+    instructor: {
+      fullName: `${instructor.firstName} ${instructor.lastName}`,
+      email: instructor.email,
+    },
+    group: {
+      _id: groupData._id,
+      code: groupData.code,
+      schedule: groupData.schedule,
+    }
+  }
+});
+
   } 
 );
 
