@@ -92,12 +92,18 @@ res.status(200).json({
 
 
 
+
+
 export const getStudentDashboardData = asynchandler(async (req, res, next) => {
-  const studentId  = req.user._id;
-    console.log(studentId);
+  const studentId = req.user._id;
 
   const data = await ClassSelectionModel.aggregate([
-    { $match: { studentId: new mongoose.Types.ObjectId(studentId), status: 'confirmed' } },
+    {
+      $match: {
+        studentId: new mongoose.Types.ObjectId(studentId),
+        status: 'confirmed'
+      }
+    },
 
     {
       $lookup: {
@@ -111,45 +117,28 @@ export const getStudentDashboardData = asynchandler(async (req, res, next) => {
 
     {
       $lookup: {
-        from: 'units',
-        localField: 'courseId',
-        foreignField: 'courseId',
-        as: 'units'
+        from: 'groups',
+        localField: 'groupId',
+        foreignField: '_id',
+        as: 'group'
       }
     },
+    { $unwind: '$group' },
 
     {
-      $unwind: {
-        path: '$units',
-        preserveNullAndEmptyArrays: true
-      }
-    },
+      $project: {
+        _id: 0,
+        courseId: '$course._id',
+        courseTitle: '$course.title',
+        courseImage: '$course.image',
+        duration: '$course.duration',
+        price: '$course.price',
+        group: {
+          _id: '$group._id',
+          name: '$group.code',
+          level: '$group.level',
 
-    {
-      $lookup: {
-        from: 'lessons',
-        localField: 'units._id',
-        foreignField: 'unitId',
-        as: 'units.lessons'
-      }
-    },
-
-    {
-      $group: {
-        _id: '$course._id',
-        courseTitle: { $first: '$course.title' },
-        courseImage: { $first: '$course.image' },
-        duration: { $first: '$course.duration' },
-        price: { $first: '$course.price' },
-        units: {
-          $push: {
-            _id: '$units._id',
-            title: '$units.title',
-            description: '$units.description',
-            lock: '$units.lock',
-            completed: '$units.Completed',
-            lessons: '$units.lessons'
-          }
+          schedule: '$group.schedule',
         }
       }
     }
@@ -165,7 +154,6 @@ export const getStudentDashboardData = asynchandler(async (req, res, next) => {
     data
   });
 });
-
 
 
 export const updateProfile = asynchandler(async (req, res, next) => {
@@ -267,3 +255,12 @@ export const  setInstructorAvailability = asynchandler(async (req, res, next) =>
   });
 });
 
+
+export const getAllUsers = asynchandler(async (req, res, next) => {
+  const users = await User.find({}, '_id firstName lastName email role specialization');
+  res.status(200).json({
+    success: true,
+    count: users.length,
+    users
+  });
+});
