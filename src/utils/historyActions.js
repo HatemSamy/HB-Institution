@@ -1,0 +1,13 @@
+
+
+
+
+
+export const HISTORY_ACTIONS = Object.freeze({
+  VIEW_LESSON: 'VIEW_LESSON',
+  SUBMIT_EXAM: 'SUBMIT_EXAM',
+  SEND_NOTE: 'SEND_NOTE',
+  LOGIN: 'LOGIN',
+  LOGOUT: 'LOGOUT',
+  ENROLL_COURSE: 'ENROLL_COURSE', 
+});

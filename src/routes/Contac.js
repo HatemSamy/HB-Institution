@@ -1,5 +1,5 @@
 import express from 'express';
-import * as ContactController  from '../controllers/contactContriller.js';
+import * as ContactController  from '../controllers/contactController.js';
 import { authorize, protect } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
 

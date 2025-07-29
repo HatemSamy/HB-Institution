@@ -1,6 +1,7 @@
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import ClassSelectionModel from "../models/ClassSelection.js";
 import Group from "../models/Group.js";
+import { addHistory } from "../services/history.service.js";
 import { sendEmail } from "../utils/email.js";
 import mongoose from 'mongoose';
 
@@ -58,17 +59,28 @@ export const ClassSelection = asynchandler(async (req, res) => {
 
     await classSelection.save();
 
+   
+
     const populatedSelection = await ClassSelectionModel.findById(classSelection._id)
       .populate('studentId', 'firstName lastName email')
       .populate('courseId', 'title')
       .populate('instructorId', 'firstName lastName email')
       .populate('groupId');
 
+
     const student = populatedSelection.studentId;
     const course = populatedSelection.courseId;
     const instructor = populatedSelection.instructorId;
     const groupData = populatedSelection.groupId;
 
+ await addHistory({
+    userId: req.user.firstName,
+    action: HISTORY_ACTIONS.ENROLL_COURSE,
+    metadata: {
+      Course:course.title,
+    },
+  });
+  
     const htmlMessage = `
       <h2>Class Selection Confirmation</h2>
       <p>Dear ${student.firstName},</p>

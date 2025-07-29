@@ -14,6 +14,10 @@ import unitRoutes from './src/routes/unitRoutes.js';
 import userRoutes from './src/routes/UserRouters.js';
 import newsRoutes from './src/routes/NewsRouter.js';
 import ContactRoutes from './src/routes/Contac.js';
+import noteRoutes from './src/routes/noteRouter.js';
+import historyRoutes from './src/routes/historyRouter.js';
+
+
 
 
 import lessonRoutes from './src/routes/lessonRouter.js';
@@ -70,7 +74,10 @@ app.use(`${baseUrl}/unit`,unitRoutes);
 app.use(`${baseUrl}/user`,userRoutes);
 app.use(`${baseUrl}/lesson`,lessonRoutes);
 app.use(`${baseUrl}/news`,newsRoutes);
+app.use(`${baseUrl}/note`,noteRoutes);
 app.use(`${baseUrl}/Contact`,ContactRoutes);
+app.use(`${baseUrl}/history`,historyRoutes);
+
 
 
 

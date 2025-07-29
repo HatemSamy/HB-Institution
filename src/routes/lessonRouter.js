@@ -1,7 +1,6 @@
 import express from 'express';
 import * as lessonController from '../controllers/lessonController.js';
 import * as lessonValidator from '../validations/lessonValidation.js';
-
 import { authorize, protect } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
 import { validation } from '../middleware/validation.js';
@@ -9,19 +8,14 @@ import { fileValidation, Multer } from '../utils/multer.js';
 import { HME } from '../services/multer.js';
 const router = express.Router({ mergeParams: true });
 
-
-// router.route('/')
-//   .post(protect, validation(lessonValidator.createLessonSchema), lessonController.createLesson);
-
-
-// POST /api/lessons - Create a new lesson with optional resource upload
 router.post('/',protect,Multer(fileValidation.pdf).single('resource'),validation(lessonValidator.createLessonSchema),HME,lessonController.createLesson);
 
 router.get('/calendar',protect,authorize(AccessRoles.general) ,lessonController.getStudentWeeklySchedule);
 
 router.route('/:lessonId')
   .get(lessonController.getLessonDetails)
-  .patch(
+  .put(
+    Multer(fileValidation.pdf).single('resource'),
     protect,
     authorize(AccessRoles.Admin),
     validation(lessonValidator.updateLessonSchema),
@@ -40,13 +34,8 @@ router.patch(
   '/:lessonId/completed',
   protect,
   authorize(AccessRoles.instructor),
-  lessonController.markLessonAsCompleted
+  lessonController.completeLesson
 );
-
-
-
-
-
 
 
 export default router;

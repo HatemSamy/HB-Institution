@@ -1,7 +1,6 @@
 import Course from "../models/Course.js";
 import { fileValidation } from "../services/multer.js";
-
-// Checks if a course is approved
+import cloudinary from "../utils/cloudinary.js";
 
 export const isCourseApproved = async (courseId) => {
   const course = await Course.findById(courseId).select('isApproved'); // or select('status')
@@ -12,12 +11,6 @@ export const isCourseApproved = async (courseId) => {
 
   return Course.isApproved === true;
 };
-
-
-
-
-
-
 export const Roles = {
     Admin: "admin",
     Student: "student",
@@ -30,13 +23,10 @@ export const AccessRoles = {
     general: [Roles.Admin, Roles.Student, Roles.instructor],
     Admin: [Roles.Admin],
     Student: [Roles.Student],
-    DoupleRole: [Roles.instructor, Roles.Admin],
+    DoupleRole: [Roles.instructor, Roles.Student],
     instructor: [Roles.instructor]
 
 }
-
-
-
 
 export const normalizeUnitBody = (req, res, next) => {
   if (typeof req.body.topic === 'string') {
@@ -51,12 +41,6 @@ export const normalizeUnitBody = (req, res, next) => {
 };
 
 
-
-
-
-
-// isScheduleSuitable.js
-// utils/isScheduleSuitable.js
 export function isScheduleSuitable(schedule, availableTime) {
   for (const slot of schedule) {
     const day = slot.dayOfWeek.toLowerCase();
@@ -85,10 +69,6 @@ export function isScheduleSuitable(schedule, availableTime) {
 
   return { suitable: true };
 }
-
-
-
-
 
 export function isScheduleConflict(newSchedule, existingGroups) {
   const toMinutes = timeStr => {
@@ -130,8 +110,6 @@ export function isScheduleConflict(newSchedule, existingGroups) {
   return { suitable: true };
 }
 
-
-
 export function getFileType(mimetype) {
   if (fileValidation.pdf.includes(mimetype)) return 'pdf';
   if (fileValidation.document.includes(mimetype)) return 'doc';
@@ -140,16 +118,23 @@ export function getFileType(mimetype) {
   return 'other';
 }
 
+export const uploadResourceToCloudinary = async (file) => {
+  if (!file) throw new Error('No file provided');
+
+  const result = await cloudinary.uploader.upload(file.path, {
+    resource_type: "raw",
+    folder: "lesson-resources",
+    format: "pdf",
+  });
+
+  return {
+    url: result.secure_url,
+    public_id: result.public_id,
+    type: 'pdf',
+    filename: file.originalname,
+  };
+};
 
 
 
-// Supported file types for lesson resources
-const resourceValidation = [
-    ...fileValidation.pdf,
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/zip',
-    'application/x-zip-compressed'
-];
+

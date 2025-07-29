@@ -25,11 +25,6 @@ export const updateLessonSchema = {
         'string.min': 'Content must be at least {#limit} characters'
       }),
 
-    islocked: Joi.boolean()
-      .messages({
-        'boolean.base': 'isLocked must be true or false'
-      }),
-
 
   })
   .min(1)
