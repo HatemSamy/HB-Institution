@@ -26,18 +26,18 @@ resources: {
       enum: ['pdf', 'doc', 'ppt', 'zip', 'other'],
       default: 'pdf'
     },
-    filename: { type: String } // Optional: store original filename
+    filename: { type: String } 
   },
   unitId: {
     type: Types.ObjectId,
     ref: 'Unit',
     required: true
   },
-  islocked: {
-    type: Boolean,
-    default: true 
-  },
 
+  unlockedForGroups: [{
+    type: Types.ObjectId,
+    ref: 'Group'
+  }],
    completed: {
     type: Boolean,
     default: false 
@@ -71,6 +71,9 @@ lessonSchema.virtual('unit', {
 });
 
 lessonSchema.index({ unitId: 1, order: 1 });
+
+lessonSchema.index({ unlockedForGroups: 1 });
+
 
 const Lesson = model('Lesson', lessonSchema);
 export default Lesson;
