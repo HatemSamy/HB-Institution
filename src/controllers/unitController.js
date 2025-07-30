@@ -3,77 +3,6 @@ import { AppError, asynchandler } from "../middleware/erroeHandling.js";
 import Course from "../models/Course.js";
 import Lesson from "../models/Lesson.js";
 import Unit from "../models/Unit.js";
-// import { uploadToCloudinary } from "../utils/multer.js";
-
-// export const createUnit = asynchandler(async (req, res, next) => {
-  
-//   const course = await Course.findById(req.params.courseId);
-//   console.log(req.params.courseId);
-  
-//   if (!course) {
-//     return next(new AppError('Course not found', 404));
-//   }
-
-//   if (course.CreatedBy.toString() !== req.user._id.toString()) {
-//     return next(new AppError('Not authorized to add unit to this course', 403));
-//   }
-
-//   const attachments = req.files?.length
-//     ? req.files.map(file => `${req.protocol}://${req.get('host')}/uploads/Course/${file.filename}`)
-//     : [];
-
-//   const unitData = {
-//     ...req.body,
-//     attachments,
-//     CreatedBy: req.user._id,
-//     courseId: req.params.courseId
-
-//   };
-
-//   const unit = await Unit.create(unitData);
-
-//   res.status(201).json({
-//     success: true,
-//     message: 'Unit created successfully',
-//     data: unit
-//   });
-// });
-
-
-// export const createUnit = asynchandler(async (req, res, next) => {
-//   const course = await Course.findById(req.params.courseId);
-//   if (!course) {
-//     return next(new AppError('Course not found', 404));
-//   }
-
-//   if (course.CreatedBy.toString() !== req.user._id.toString()) {
-//     return next(new AppError('Not authorized to add unit to this course', 403));
-//   }
-
-//   // رفع المرفقات إلى Cloudinary
-//   let attachments = [];
-//   if (req.files?.length) {
-//     const uploadPromises = req.files.map(file =>
-//       uploadToCloudinaryRaw(file.buffer, file.originalname)
-//     );
-//     attachments = await Promise.all(uploadPromises);
-//   }
-
-//   const unitData = {
-//     ...req.body,
-//     attachments,
-//     CreatedBy: req.user._id,
-//     courseId: req.params.courseId
-//   };
-
-//   const unit = await Unit.create(unitData);
-
-//   res.status(201).json({
-//     success: true,
-//     message: 'Unit created successfully',
-//     data: unit
-//   });
-// });
 
 
 
@@ -150,6 +79,7 @@ export const getUnitById = asynchandler(async (req, res) => {
 
   res.json(response);
 });
+
 // @desc    Update a unit
 // @route   PUT /api/unit/update/:id
 // @access  Private (Instructor/Owner)
@@ -175,37 +105,67 @@ export const updateUnit = asynchandler(async (req, res, next) => {
 
 // @desc    Delete a unit
 export const deleteUnit = asynchandler(async (req, res) => {
-  const unit = await Unit.findById(req.params.id);
-  if (!unit) {
-    return res.status(404).json({ success: false, message: 'Unit not found' });
-  }
+  const unit = await Unit.findById(req.params.unitId);
+  if (!unit) throw new AppError('Unit not found', 404);
 
-  if (unit.CreatedBy.toString() !== req.user._id.toString()) {
-    return res.status(403).json({ success: false, message: 'Not authorized' });
-  }
+  await Unit.findOneAndDelete({ _id: unit._id });
 
-  await unit.deleteOne();
-  res.json({ success: true, message: 'Unit deleted successfully' });
+  res.status(200).json({
+    success: true,
+    message: 'Unit and related lessons deleted successfully'
+  });
 });
 
-// @desc    Toggle lock status of a unit
-// @route   PATCH /api/units/:id/lock
-// @access  Protected (must be the creator of the unit)
-export const toggleUnitLock = asynchandler(async (req, res, next) => {
-  const { id } = req.params;
 
-  const unit = await Unit.findById(id).select('title locked Completed');
-  if (!unit) {
-    return next(new AppError('Unit not found', 404));
+
+
+
+
+export const toggleUnitAccess = asynchandler(async (req, res) => {
+  const { unitId, groupId } = req.params;
+
+  const unit = await Unit.findById(unitId);
+  if (!unit) throw new AppError('Unit not found', 404);
+
+  const isUnlocked = unit.unlockedForGroups?.some(id => id.equals(groupId));
+
+  if (isUnlocked) {
+    unit.unlockedForGroups = unit.unlockedForGroups.filter(id => !id.equals(groupId));
+  } else {
+    unit.unlockedForGroups = [...(unit.unlockedForGroups || []), groupId];
   }
 
-  unit.lock = !unit.lock;
   await unit.save();
 
   res.status(200).json({
     success: true,
-    message: `Unit is now ${unit.lock ? 'locked' : 'unlocked'}`,
-    data: unit
+    message: `Unit is now ${isUnlocked ? 'locked' : 'unlocked'} for this group`,
+    data: {
+      unitId: unit._id,
+      groupId,
+      unlocked: !isUnlocked
+    }
   });
 });
 
+
+
+export const getUnitsStatus = asynchandler(async (req, res, next) => {
+  const { groupId ,courseId} = req.params;
+
+  const units = await Unit.find({courseId}).populate('courseId', 'title');
+
+  const formatted = units.map(unit => ({
+    id: unit._id,
+    title: unit.title,
+    course: unit.courseId?.title,
+    completed: unit.Completed,
+    unlocked: unit.unlockedForGroups.includes(groupId)
+  }));
+
+  res.status(200).json({
+    success: true,
+    count: formatted.length,
+    units: formatted
+  });
+});

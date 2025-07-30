@@ -1,5 +1,6 @@
 // models/chapter.model.js
 import mongoose, { Schema } from 'mongoose';
+import Lesson from './Lesson.js';
 
 const UnitSchema = new mongoose.Schema({
   title: {
@@ -27,11 +28,10 @@ const UnitSchema = new mongoose.Schema({
 
 
 
-  lock: {
-    type: Boolean,
-   default: true
-  },
- 
+   unlockedForGroups: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Group'
+  }],
   
    courseId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -48,6 +48,17 @@ const UnitSchema = new mongoose.Schema({
   }
     
 , { timestamps: true });
+
+
+
+// delete related lessons
+UnitSchema.pre('findOneAndDelete', async function (next) {
+  const unit = await this.model.findOne(this.getFilter());
+  if (unit) {
+    await Lesson.deleteMany({ unitId: unit._id });
+  }
+  next();
+});
 
 const Unit = mongoose.model('Unit', UnitSchema);
 export default Unit;

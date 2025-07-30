@@ -317,16 +317,19 @@ export const completeLessonByInstructor = asynchandler(async (req, res, next) =>
 
 
 export const getLessonsStatus = asynchandler(async (req, res, next) => {
-  const { groupId } = req.params;
+  const { groupId, unitId } = req.params;
 
-  const lessons = await Lesson.find().populate('unitId', 'title').sort({ order: 1 });
+  const lessons = await Lesson.find({ unitId }) 
+    .populate('unitId', 'title')
+    .sort({ order: 1 });
 
   const formatted = lessons.map(lesson => ({
     id: lesson._id,
     title: lesson.title,
+    order:lesson.order,
     unit: lesson.unitId?.title,
     completed: lesson.completedByInstructors,
-    unlocked: lesson.unlockedForGroups.includes(groupId)
+    unlocked: lesson.unlockedForGroups.some(id => id.equals(groupId))
   }));
 
   res.status(200).json({
@@ -335,6 +338,7 @@ export const getLessonsStatus = asynchandler(async (req, res, next) => {
     lessons: formatted
   });
 });
+
 
 
 
