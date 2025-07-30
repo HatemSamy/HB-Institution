@@ -14,7 +14,7 @@ router.post('/',protect,Multer(fileValidation.pdf).single('resource'),validation
 
 router.patch('/:lessonId/toggle-access/:groupId',protect,authorize(AccessRoles.instructor),lessonController.toggleLessonAccess);
 
-router.get('/:groupId/status/:unitId', protect, authorize(AccessRoles.instructor), lessonController.getLessonsStatus);
+router.get('/:groupId/status/:unitId', protect, authorize(AccessRoles.general), lessonController.getLessonsStatus);
 
 
 router.patch('/:lessonId/complete/:groupId', protect,authorize(AccessRoles.instructor), lessonController.completeLessonByInstructor);

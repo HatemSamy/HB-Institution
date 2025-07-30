@@ -40,6 +40,8 @@ export const ClassSelection = asynchandler(async (req, res) => {
       courseId,
       status: { $in: ['pending', 'confirmed'] }
     });
+    console.log({'existingSelection':existingSelection});
+    
 
     if (existingSelection) {
       return res.status(400).json({
@@ -55,7 +57,7 @@ export const ClassSelection = asynchandler(async (req, res) => {
       instructorId,
       groupId,
       selectedSchedule,
-      status: 'pending'
+      status: 'confirmed'
     });
 
     await classSelection.save();
