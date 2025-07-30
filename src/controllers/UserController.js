@@ -33,20 +33,13 @@ export const blockUser = asynchandler(async (req, res, next) => {
 export const getInstructors = asynchandler(async (req, res) => {
   const instructors = await User.find({ role: 'instructor' }).select('-password');
 
-  const formatted = instructors.map(instructor => ({
-    _id: instructor._id,
-    firstName: instructor.firstName,
-    lastName: instructor.lastName,
-    specialization: instructor.specialization,
-    availableTime: instructor.availableTime
-  }));
-
   res.status(200).json({
     success: true,
-    results: formatted.length,
-    data: formatted
+    results: instructors.length,
+    data: instructors
   });
 });
+
 
 
 
