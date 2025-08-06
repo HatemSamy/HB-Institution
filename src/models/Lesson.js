@@ -61,7 +61,7 @@ resources: {
   toObject: { virtuals: true }
 });
 
-
+// Virtual for unit relationship
 lessonSchema.virtual('unit', {
   ref: 'Unit',
   localField: 'unitId',
@@ -70,10 +70,50 @@ lessonSchema.virtual('unit', {
   options: { select: 'courseId' }
 });
 
-lessonSchema.index({ unitId: 1, order: 1 });
+// Virtual for meetings relationship
+lessonSchema.virtual('meetings', {
+  ref: 'Meeting',
+  localField: '_id',
+  foreignField: 'lessonId'
+});
 
+// Virtual for active meeting
+lessonSchema.virtual('activeMeeting', {
+  ref: 'Meeting',
+  localField: '_id',
+  foreignField: 'lessonId',
+  justOne: true,
+  match: { status: 'active' }
+});
+
+// Indexes
+lessonSchema.index({ unitId: 1, order: 1 });
 lessonSchema.index({ unlockedForGroups: 1 });
 
+// Instance methods
+lessonSchema.methods.hasActiveMeeting = async function() {
+  const Meeting = mongoose.model('Meeting');
+  const activeMeeting = await Meeting.findOne({
+    lessonId: this._id,
+    status: 'active'
+  });
+  return !!activeMeeting;
+};
+
+lessonSchema.methods.getActiveMeeting = async function() {
+  const Meeting = mongoose.model('Meeting');
+  return await Meeting.findOne({
+    lessonId: this._id,
+    status: 'active'
+  }).populate('groupId', 'code').populate('instructorId', 'firstName lastName');
+};
+
+lessonSchema.methods.getAllMeetings = async function() {
+  const Meeting = mongoose.model('Meeting');
+  return await Meeting.find({
+    lessonId: this._id
+  }).populate('groupId', 'code').populate('instructorId', 'firstName lastName').sort({ createdAt: -1 });
+};
 
 const Lesson = model('Lesson', lessonSchema);
 export default Lesson;

@@ -6,7 +6,6 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
 export const registerUser = asynchandler(async (req, res, next) => {
-  console.log(req.body)
   const { firstName, lastName, email, password, role } = req.body
 
   if (role === 'admin') {
@@ -31,7 +30,6 @@ export const registerUser = asynchandler(async (req, res, next) => {
   );
 
   const confirmLink = `${req.protocol}://${req.headers.host}${process.env.BASEURL}/auth/confirmEmail/${token}`
-  console.log(confirmLink);
   
   const message = `<a href="${confirmLink}">Confirm your email</a>`;
 
@@ -203,7 +201,6 @@ export const updatePassword = asynchandler(async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
 
   const user = await User.findById(userId).select('+password firstName email role');
-  console.log(user);
   
   if (!user){ 
     return next(new AppError('User not found', 404));

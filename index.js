@@ -1,4 +1,3 @@
-
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -16,16 +15,13 @@ import newsRoutes from './src/routes/NewsRouter.js';
 import ContactRoutes from './src/routes/Contac.js';
 import noteRoutes from './src/routes/noteRouter.js';
 import historyRoutes from './src/routes/historyRouter.js';
-
-
-
-
 import lessonRoutes from './src/routes/lessonRouter.js';
+import meetingRoutes from './src/routes/meetingRouter.js';
+import notificationRoutes from './src/routes/notificationRouter.js';
 import ClassSelectionRoutes from './src/routes/ClassSelectionRouter.js';
-
+import attendanceRoutes from './src/routes/attendanceRouter.js';
+import joinTrackingRoutes from './src/routes/joinTrackingRouter.js';
 import { globalErrorHandling } from './src/middleware/erroeHandling.js'
-
-
 
 // Load env vars
 dotenv.config();
@@ -47,9 +43,7 @@ if (process.env.NODE_ENV === 'DEV') {
 }
 
 // Body parsing middleware
-app.use(express.json({
-
- }));
+app.use(express.json({}));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -62,9 +56,10 @@ app.get('/api/v1/health', (req, res) => {
     environment: process.env.NODE_ENV
   });
 });
-const baseUrl = process.env.BASEURL
-// API Routes
 
+const baseUrl = process.env.BASEURL
+
+// API Routes
 app.use(`${baseUrl}/auth`, authRoutes);
 app.use(`${baseUrl}/courses`,courseRoutes);
 app.use(`${baseUrl}/ClassSelection`,ClassSelectionRoutes);
@@ -73,18 +68,16 @@ app.use(`${baseUrl}/group`,groupRoutes);
 app.use(`${baseUrl}/unit`,unitRoutes);
 app.use(`${baseUrl}/user`,userRoutes);
 app.use(`${baseUrl}/lesson`,lessonRoutes);
+app.use(`${baseUrl}/meeting`,meetingRoutes);
+app.use(`${baseUrl}/notifications`,notificationRoutes);
 app.use(`${baseUrl}/news`,newsRoutes);
 app.use(`${baseUrl}/note`,noteRoutes);
 app.use(`${baseUrl}/Contact`,ContactRoutes);
 app.use(`${baseUrl}/history`,historyRoutes);
 
-
-
-
-
-
-
-
+// Attendance tracking routes
+app.use(`${baseUrl}/attendance`, attendanceRoutes);
+app.use(`${baseUrl}`, joinTrackingRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -94,7 +87,9 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/api/v1/health',
-      auth: '/api/v1/auth'
+      auth: '/api/v1/auth',
+      attendance: '/api/v1/attendance',
+      join: '/api/v1/join'
     }
   });
 });
@@ -112,9 +107,18 @@ app.use(globalErrorHandling);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`📋 Attendance tracking enabled at ${baseUrl}/attendance`);
+  console.log(`🔗 Join tracking enabled at ${baseUrl}/join`);
+  
+  // Initialize meeting scheduler for 30-minute reminders
+  try {
+    const { default: MeetingScheduler } = await import('./src/services/meetingScheduler.js');
+    MeetingScheduler.init();
+  } catch (error) {
+    console.error('❌ Failed to initialize meeting scheduler:', error);
+  }
 });
-
 
 export default app;

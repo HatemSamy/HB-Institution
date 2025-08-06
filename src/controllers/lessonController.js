@@ -1,12 +1,210 @@
 import { asynchandler, AppError } from "../middleware/erroeHandling.js";
-import ClassSelectionModel from "../models/ClassSelection.js";
 import Lesson from "../models/Lesson.js";
 import Unit from "../models/Unit.js";
 import moment from 'moment-timezone';
 import {uploadResourceToCloudinary } from "../utils/helpers.js";
-import mongoose from "mongoose";
+import Meeting from "../models/Meeting.js";
+import ClassSelectionModel from "../models/ClassSelection.js";
+import bigBlueButtonService from "../services/bigBlueButtonService.js";
 
+/**
+ * Get meeting information for a lesson and group with direct tracked URLs
+ * Returns meeting status and ready-to-use tracked join URL
+ */
+export const getMeetingInfo = asynchandler(async (req, res, next) => {
+  const { lessonId, groupId } = req.params;
+  const userId = req.user._id;
+  const userRole = req.user.role;
 
+  // For students, verify they belong to the group
+  if (userRole === 'student') {
+    const enrollment = await ClassSelectionModel.findOne({
+      studentId: userId,
+      groupId: groupId,
+      status: 'confirmed'
+    });
+    
+    if (!enrollment) {
+      throw new AppError('You are not enrolled in this group', 403);
+    }
+  }
+
+  // Find meeting for this lesson and group
+  const meeting = await Meeting.findOne({
+    lessonId: lessonId,
+    groupId: groupId,
+    status: { $in: ['scheduled', 'active'] }
+  })
+  .populate('groupId', 'code')
+  .populate('instructorId', 'firstName lastName');
+
+  if (!meeting) {
+    return res.status(200).json({
+      success: true,
+      data: {
+        hasMeeting: false,
+        meeting: null,
+        canJoin: false,
+        canStart: false,
+        userRole: userRole
+      }
+    });
+  }
+
+  // Check if meeting is running on BigBlueButton server
+  let isRunning = false;
+  try {
+    isRunning = await bigBlueButtonService.isMeetingRunning(meeting.meetingID);
+  } catch (error) {
+    console.error('Error checking meeting status:', error);
+    isRunning = false;
+  }
+
+  // Determine user capabilities
+  const canJoin = (meeting.status === 'active' || (meeting.status === 'scheduled' && isRunning)) && isRunning;
+  const canStart = userRole === 'instructor' && meeting.status === 'scheduled' && meeting.instructorId._id.equals(userId);
+
+  // Generate user-specific tracked URL for attendance (DIRECT URL TO USE)
+  const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+  const apiBase = `${baseUrl}/api/v1`;
+  
+  let meetingUrl = null;
+  if (userRole === 'instructor') {
+    meetingUrl = `${apiBase}/join/${meeting.meetingID}/instructor/${userId}?role=instructor`;
+  } else {
+    meetingUrl = `${apiBase}/join/${meeting.meetingID}/student/${userId}?role=student`;
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      hasMeeting: true,
+      meeting: {
+        id: meeting._id,
+        meetingID: meeting.meetingID,
+        title: meeting.title,
+        status: meeting.status,
+        scheduledStartTime: meeting.scheduledStartTime,
+        actualStartTime: meeting.actualStartTime,
+        duration: meeting.duration,
+        group: meeting.groupId.code,
+        instructor: `${meeting.instructorId.firstName} ${meeting.instructorId.lastName}`,
+        isRunning: isRunning,
+        meetingUrl: meetingUrl, // DIRECT TRACKED URL - READY TO USE
+        trackingEnabled: true,
+        attendanceTracking: 'url-based'
+      },
+      canJoin: canJoin,
+      canStart: canStart,
+      userRole: userRole
+    }
+  });
+});
+
+/**
+ * Get lesson details with meeting info and direct tracked URLs
+ */
+export const getLessonDetails = asynchandler(async (req, res, next) => {
+  const { lessonId,groupId } = req.params;
+  const userId = req.user._id;
+  console.log({'userId':userId});
+  
+  const userRole = req.user.role;
+
+  const lesson = await Lesson.findById(lessonId)
+    .populate({
+      path: 'unitId',
+      select: 'title order courseId',
+      populate: {
+        path: 'courseId',
+        select: 'title _id'
+      }
+    })
+    .select('-__v');
+
+  if (!lesson) {
+    throw new AppError('Lesson not found', 404);
+  }
+
+  // Get meeting information if groupId is provided
+  let meetingInfo = null;
+  if (groupId) {
+    // For students, verify they belong to the group
+    if (userRole === 'student') {
+      const enrollment = await ClassSelectionModel.findOne({
+        studentId: userId,
+        groupId: groupId,
+        status: 'confirmed'
+      });
+      
+      if (!enrollment) {
+        throw new AppError('You are not enrolled in this group', 403);
+      }
+    }
+
+    // Find meeting for this lesson and group
+    const meeting = await Meeting.findOne({
+      lessonId: lessonId,
+      groupId: groupId,
+      status: { $in: ['scheduled', 'active'] }
+    })
+    .populate('groupId', 'code')
+    .populate('instructorId', 'firstName lastName');
+
+    if (meeting) {
+      // Check if meeting is running on BigBlueButton server
+      let isRunning = false;
+      try {
+        isRunning = await bigBlueButtonService.isMeetingRunning(meeting.meetingID);
+      } catch (error) {
+        console.error('Error checking meeting status:', error);
+        isRunning = false;
+      }
+
+      // Determine user capabilities
+      const canJoin = (meeting.status === 'active' || (meeting.status === 'scheduled' && isRunning)) && isRunning;
+      const canStart = userRole === 'instructor' && meeting.status === 'scheduled' && meeting.instructorId._id.equals(userId);
+
+      // Generate user-specific tracked URL (DIRECT URL TO USE)
+      const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+      const apiBase = `${baseUrl}/api/v1`;
+      
+      let meetingUrl = null;
+      if (userRole === 'instructor') {
+        meetingUrl = `${apiBase}/join/${meeting.meetingID}/instructor/${userId}?role=instructor`;
+      } else {
+        meetingUrl = `${apiBase}/join/${meeting.meetingID}/student/${userId}?role=student`;
+      }
+
+      meetingInfo = {
+        id: meeting._id,
+        meetingID: meeting.meetingID,
+        title: meeting.title,
+        status: meeting.status,
+        scheduledStartTime: meeting.scheduledStartTime,
+        actualStartTime: meeting.actualStartTime,
+        duration: meeting.duration,
+        group: meeting.groupId.code,
+        instructor: `${meeting.instructorId.firstName} ${meeting.instructorId.lastName}`,
+        isRunning: isRunning,
+        meetingUrl: meetingUrl, // DIRECT TRACKED URL - READY TO USE
+        canJoin: canJoin,
+        canStart: canStart,
+        trackingEnabled: true,
+        attendanceTracking: 'url-based'
+      };
+    }
+  }
+
+  res.status(200).json({ 
+    success: true,
+    message: 'Lesson Details',
+    data: {
+      lesson,
+      meeting: meetingInfo
+    }
+  });
+});
 
 const verifyUnitAccess = async (unitId, courseId) => {
   const unit = await Unit.findOne({ _id: unitId });
@@ -54,29 +252,6 @@ export const getUnitWithLessons = asynchandler(async (req, res, next) => {
 
   res.json(response);
 });
-
-export const getLessonDetails = asynchandler(async (req, res, next) => {
-  const { lessonId } = req.params;
-
-  const lesson = await Lesson.findById(lessonId)
-    .populate({
-      path: 'unitId',
-      select: 'title order courseId',
-      populate: {
-        path: 'courseId',
-        select: 'title _id'
-      }
-    })
-    .select('-__v');
-
-  if (!lesson) {
-    throw new AppError('Lesson not found', 404);
-  }
-
-  res.status(201).json({ message: 'Lesson Details ', lesson });
-
-});
-
 
 export const deleteLesson = asynchandler(async (req, res, next) => {
   const { lessonId } = req.params;
@@ -373,4 +548,42 @@ export const toggleLessonAccess = asynchandler(async (req, res) => {
   });
 });
 
+/**
+ * Get lessons with meeting information for a specific group
+ */
+export const getLessonsWithMeetings = asynchandler(async (req, res, next) => {
+  const { groupId, unitId } = req.params;
 
+  // Get all lessons for the unit
+  const lessons = await Lesson.find({ unitId })
+    .populate('unitId', 'title')
+    .sort({ order: 1 });
+
+  const lessonsWithMeetingInfo = lessons.map(lesson => {
+    const isUnlocked = lesson.unlockedForGroups.some(id => id.equals(groupId));
+    
+    return {
+      id: lesson._id,
+      title: lesson.title,
+      description: lesson.description,
+      order: lesson.order,
+      unit: lesson.unitId?.title,
+      completed: lesson.completed,
+      unlocked: isUnlocked,
+      meeting: lesson.meeting ? {
+        hasActiveMeeting: lesson.meeting.isActive,
+        meetingID: lesson.meeting.meetingID,
+        createdAt: lesson.meeting.createdAt,
+        endedAt: lesson.meeting.endedAt,
+        duration: lesson.meeting.duration,
+        recordingAvailable: lesson.meeting.recordingAvailable
+      } : null
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    count: lessonsWithMeetingInfo.length,
+    lessons: lessonsWithMeetingInfo
+  });
+});
