@@ -74,8 +74,6 @@ app.use(`${baseUrl}/news`,newsRoutes);
 app.use(`${baseUrl}/note`,noteRoutes);
 app.use(`${baseUrl}/Contact`,ContactRoutes);
 app.use(`${baseUrl}/history`,historyRoutes);
-
-// Attendance tracking routes
 app.use(`${baseUrl}/attendance`, attendanceRoutes);
 app.use(`${baseUrl}`, joinTrackingRoutes);
 
@@ -109,10 +107,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, async () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log(`📋 Attendance tracking enabled at ${baseUrl}/attendance`);
-  console.log(`🔗 Join tracking enabled at ${baseUrl}/join`);
-  
-  // Initialize meeting scheduler for 30-minute reminders
   try {
     const { default: MeetingScheduler } = await import('./src/services/meetingScheduler.js');
     MeetingScheduler.init();

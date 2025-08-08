@@ -12,9 +12,9 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     lessonId, 
     groupId, 
     duration, 
-    scheduledStartTime, // Legacy ISO format support
-    scheduledDate,      // Simple date format: "06/08/2025"
-    scheduledTime,      // Simple time format: "09:44" or "9:44 AM"
+    scheduledStartTime, 
+    scheduledDate,      
+    scheduledTime,      
     dateFormat          // Optional: "DD/MM/YYYY" or "MM/DD/YYYY"
   } = req.body;
   const instructorId = req.user._id;
