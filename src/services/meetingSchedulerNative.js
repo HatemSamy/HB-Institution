@@ -55,8 +55,10 @@ class MeetingSchedulerNative {
    */
   static scheduleReminderForMeeting(meeting) {
     const now = new Date();
-    const reminderTime = new Date(meeting.scheduledStartTime.getTime() - 30 * 60 * 1000); // 30 minutes before
     
+    const reminderTime = new Date(meeting.scheduledStartTime.getTime() - 30 * 60 * 1000); // 30 minutes before
+      console.log({'meeting reminderTime:':reminderTime});
+      
     if (reminderTime > now) {
       const delay = reminderTime.getTime() - now.getTime();
       
