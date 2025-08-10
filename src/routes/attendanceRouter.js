@@ -2,7 +2,8 @@ import express from 'express';
 import {
   getLessonAttendance,
   markLessonAttendance,
-  exportLessonAttendance
+  exportLessonAttendance,
+  getSimpleAttendanceReport
 } from '../controllers/attendanceController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
@@ -14,6 +15,7 @@ router.use(protect);
 
 // Lesson attendance routes
 router.get('/lesson/:lessonId', authorize(AccessRoles.general), getLessonAttendance);
+router.get('/lesson/:lessonId/simple', authorize(AccessRoles.general), getSimpleAttendanceReport);
 router.get('/lesson/:lessonId/export', authorize(AccessRoles.instructor), exportLessonAttendance);
 
 // Manual lesson attendance marking (instructor only)

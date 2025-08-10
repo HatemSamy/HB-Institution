@@ -13,29 +13,6 @@ router.get(
   notificationController.getUserNotifications
 );
 
-// Get notification statistics
-router.get(
-  '/stats',
-  protect,
-  authorize(AccessRoles.general),
-  notificationController.getNotificationStats
-);
-
-// Get unread notification count
-router.get(
-  '/unread-count',
-  protect,
-  authorize(AccessRoles.general),
-  notificationController.getUnreadCount
-);
-
-// Get notifications by type
-router.get(
-  '/type/:type',
-  protect,
-  authorize(AccessRoles.general),
-  notificationController.getNotificationsByType
-);
 
 // Get meeting-related notifications (for calendar/lesson details)
 router.get(
@@ -45,39 +22,15 @@ router.get(
   notificationController.getMeetingNotifications
 );
 
-// Mark notification as read
-router.patch(
-  '/:notificationId/read',
+// Delete all notifications for user
+router.delete(
+  '/all',
   protect,
   authorize(AccessRoles.general),
-  notificationController.markNotificationAsRead
+  notificationController.deleteAllNotifications
 );
 
-// Mark multiple notifications as read
-router.patch(
-  '/mark-multiple-read',
-  protect,
-  authorize(AccessRoles.general),
-  notificationController.markMultipleAsRead
-);
-
-// Mark all notifications as read
-router.patch(
-  '/mark-all-read',
-  protect,
-  authorize(AccessRoles.general),
-  notificationController.markAllAsRead
-);
-
-// Archive notification
-router.patch(
-  '/:notificationId/archive',
-  protect,
-  authorize(AccessRoles.general),
-  notificationController.archiveNotification
-);
-
-// Delete notification
+// Delete single notification (user can delete their own)
 router.delete(
   '/:notificationId',
   protect,
@@ -85,12 +38,5 @@ router.delete(
   notificationController.deleteNotification
 );
 
-// Clean up expired notifications (admin only)
-router.delete(
-  '/cleanup/expired',
-  protect,
-  authorize(AccessRoles.admin),
-  notificationController.cleanupExpiredNotifications
-);
 
 export default router;

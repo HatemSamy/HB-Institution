@@ -5,12 +5,10 @@ import Meeting from '../models/Meeting.js';
 import Group from '../models/Group.js';
 import bigBlueButtonService from './bigBlueButtonService.js';
 
-class NotificationService {
-  
-  /**
-   * Create meeting notifications for all students in a group
-   */
-  static async createMeetingNotifications(meetingData) {
+/**
+ * Create meeting notifications for all students in a group
+ */
+export const createMeetingNotifications = async (meetingData) => {
     const {
       lessonId,
       lessonTitle,
@@ -78,7 +76,7 @@ class NotificationService {
             lessonId,
             groupId,
             duration,
-            priority: this.getNotificationPriority(type),
+            priority: getNotificationPriority(type),
             scheduledTime
           };
 
@@ -119,244 +117,146 @@ class NotificationService {
       console.error('Error creating meeting notifications:', error);
       throw error;
     }
-  }
+  };
 
-  /**
-   * Get notification priority based on type
-   */
-  static getNotificationPriority(type) {
-    switch (type) {
-      case 'meeting_reminder':
-        return 'urgent';
-      case 'meeting_started':
-        return 'urgent';
-      case 'meeting_created':
-        return 'high';
-      case 'meeting_scheduled':
-        return 'medium';
-      default:
-        return 'medium';
+/**
+ * Get notification priority based on type
+ */
+export const getNotificationPriority = (type) => {
+  switch (type) {
+    case 'meeting_reminder':
+      return 'urgent';
+    case 'meeting_started':
+      return 'urgent';
+    case 'meeting_created':
+      return 'high';
+    case 'meeting_scheduled':
+      return 'medium';
+    default:
+      return 'medium';
+  }
+};
+
+/**
+ * Get notifications for a specific user
+ */
+export const getUserNotifications = async (userId, options = {}) => {
+  try {
+    const notifications = await Notification.getUserNotifications(userId, options);
+    
+    // Count unread notifications
+    const unreadCount = await Notification.countDocuments({
+      recipientId: userId,
+      status: 'unread',
+      $or: [
+        { expiresAt: { $exists: false } },
+        { expiresAt: { $gt: new Date() } }
+      ]
+    });
+
+    return {
+      success: true,
+      notifications,
+      unreadCount,
+      total: notifications.length
+    };
+  } catch (error) {
+    console.error('Error getting user notifications:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a single notification (user can delete their own)
+ */
+export const deleteNotification = async (notificationId, userId) => {
+  try {
+    const result = await Notification.findOneAndDelete({
+      _id: notificationId,
+      recipientId: userId
+    });
+
+    if (!result) {
+      throw new Error('Notification not found');
     }
+
+    console.log(`🗑️ Deleted notification ${notificationId} for user ${userId}`);
+    
+    return {
+      success: true,
+      deletedNotification: result
+    };
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    throw error;
   }
+};
 
-  /**
-   * Get notifications for a specific user
-   */
-  static async getUserNotifications(userId, options = {}) {
-    try {
-      const notifications = await Notification.getUserNotifications(userId, options);
-      
-      // Count unread notifications
-      const unreadCount = await Notification.countDocuments({
-        recipientId: userId,
-        status: 'unread',
-        $or: [
-          { expiresAt: { $exists: false } },
-          { expiresAt: { $gt: new Date() } }
-        ]
-      });
+/**
+ * Delete all notifications for a user
+ */
+export const deleteAllNotifications = async (userId) => {
+  try {
+    const result = await Notification.deleteMany({
+      recipientId: userId
+    });
 
-      return {
-        success: true,
-        notifications,
-        unreadCount,
-        total: notifications.length
-      };
-    } catch (error) {
-      console.error('Error getting user notifications:', error);
-      throw error;
+    console.log(`🗑️ Deleted ${result.deletedCount} notifications for user ${userId}`);
+    
+    return {
+      success: true,
+      deletedCount: result.deletedCount
+    };
+  } catch (error) {
+    console.error('Error deleting all notifications:', error);
+    throw error;
+  }
+};
+
+
+/**
+ * Send reminder notifications for active meetings
+ */
+export const sendMeetingReminders = async (meetingId, instructorId) => {
+  try {
+    // Get meeting information
+    const meeting = await Meeting.findById(meetingId)
+      .populate('lessonId', 'title')
+      .populate('groupId', 'code')
+      .populate('instructorId', 'firstName lastName');
+    
+    if (!meeting) {
+      throw new Error('Meeting not found');
     }
+
+    const instructorFullName = `${meeting.instructorId.firstName || ''} ${meeting.instructorId.lastName || ''}`.trim();
+
+    const result = await createMeetingNotifications({
+      lessonId: meeting.lessonId._id,
+      lessonTitle: meeting.title,
+      groupId: meeting.groupId._id,
+      groupCode: meeting.groupId.code,
+      instructorId,
+      instructorName: instructorFullName,
+      meetingId: meeting.meetingID,
+      duration: meeting.duration,
+      type: 'meeting_reminder',
+      scheduledTime: meeting.scheduledStartTime
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error sending meeting reminders:', error);
+    throw error;
   }
+};
 
-  /**
-   * Mark notification as read
-   */
-  static async markAsRead(notificationId, userId) {
-    try {
-      const notification = await Notification.findOne({
-        _id: notificationId,
-        recipientId: userId
-      });
-
-      if (!notification) {
-        throw new Error('Notification not found');
-      }
-
-      await notification.markAsRead();
-      
-      return {
-        success: true,
-        notification
-      };
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Mark multiple notifications as read
-   */
-  static async markMultipleAsRead(notificationIds, userId) {
-    try {
-      const result = await Notification.markMultipleAsRead(userId, notificationIds);
-      
-      return {
-        success: true,
-        modifiedCount: result.modifiedCount
-      };
-    } catch (error) {
-      console.error('Error marking multiple notifications as read:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Archive notification
-   */
-  static async archiveNotification(notificationId, userId) {
-    try {
-      const notification = await Notification.findOne({
-        _id: notificationId,
-        recipientId: userId
-      });
-
-      if (!notification) {
-        throw new Error('Notification not found');
-      }
-
-      await notification.archive();
-      
-      return {
-        success: true,
-        notification
-      };
-    } catch (error) {
-      console.error('Error archiving notification:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get notification statistics for a user
-   */
-  static async getNotificationStats(userId) {
-    try {
-      const stats = await Notification.aggregate([
-        {
-          $match: {
-            recipientId: userId,
-            $or: [
-              { expiresAt: { $exists: false } },
-              { expiresAt: { $gt: new Date() } }
-            ]
-          }
-        },
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 }
-          }
-        }
-      ]);
-
-      const typeStats = await Notification.aggregate([
-        {
-          $match: {
-            recipientId: userId,
-            createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
-          }
-        },
-        {
-          $group: {
-            _id: '$type',
-            count: { $sum: 1 }
-          }
-        }
-      ]);
-
-      const statusCounts = stats.reduce((acc, stat) => {
-        acc[stat._id] = stat.count;
-        return acc;
-      }, { unread: 0, read: 0, archived: 0 });
-
-      const typeCounts = typeStats.reduce((acc, stat) => {
-        acc[stat._id] = stat.count;
-        return acc;
-      }, {});
-
-      return {
-        success: true,
-        stats: {
-          byStatus: statusCounts,
-          byType: typeCounts,
-          total: Object.values(statusCounts).reduce((sum, count) => sum + count, 0)
-        }
-      };
-    } catch (error) {
-      console.error('Error getting notification stats:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Clean up expired notifications
-   */
-  static async cleanupExpiredNotifications() {
-    try {
-      const result = await Notification.deleteMany({
-        expiresAt: { $lt: new Date() },
-        status: { $in: ['read', 'archived'] }
-      });
-
-      console.log(`🧹 Cleaned up ${result.deletedCount} expired notifications`);
-      
-      return {
-        success: true,
-        deletedCount: result.deletedCount
-      };
-    } catch (error) {
-      console.error('Error cleaning up expired notifications:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send reminder notifications for active meetings
-   */
-  static async sendMeetingReminders(meetingId, instructorId) {
-    try {
-      // Get meeting information
-      const meeting = await Meeting.findById(meetingId)
-        .populate('lessonId', 'title')
-        .populate('groupId', 'code')
-        .populate('instructorId', 'firstName lastName');
-      
-      if (!meeting) {
-        throw new Error('Meeting not found');
-      }
-
-      const instructorFullName = `${meeting.instructorId.firstName || ''} ${meeting.instructorId.lastName || ''}`.trim();
-
-      const result = await this.createMeetingNotifications({
-        lessonId: meeting.lessonId._id,
-        lessonTitle: meeting.title,
-        groupId: meeting.groupId._id,
-        groupCode: meeting.groupId.code,
-        instructorId,
-        instructorName: instructorFullName,
-        meetingId: meeting.meetingID,
-        duration: meeting.duration,
-        type: 'meeting_reminder',
-        scheduledTime: meeting.scheduledStartTime
-      });
-
-      return result;
-    } catch (error) {
-      console.error('Error sending meeting reminders:', error);
-      throw error;
-    }
-  }
-}
-
-export default NotificationService;
+// Default export for backward compatibility
+export default {
+  createMeetingNotifications,
+  getUserNotifications,
+  deleteNotification,
+  deleteAllNotifications,
+  sendMeetingReminders,
+  getNotificationPriority
+};

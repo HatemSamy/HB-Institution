@@ -6,6 +6,31 @@ import ClassSelectionModel from "../models/ClassSelection.js";
 import bigBlueButtonService from "../services/bigBlueButtonService.js";
 import NotificationService from "../services/notificationService.js";
 import { normalizeISODate, validateMeetingDateTime, parseSimpleDateAndTime } from "../middleware/dateValidation.js";
+import { parseWithAutoMomentTimezone, getUserTimezone } from "../middleware/momentTimezone.js";
+
+
+
+const getBaseUrl = () => {
+  if (process.env.VERCEL_ENV === 'production') {
+    return process.env.PRODUCTION_URL
+  } else if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.APP_URL || 'http://localhost:3000';
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const createMeeting = asynchandler(async (req, res, next) => {
   const { 
@@ -49,25 +74,40 @@ export const createMeeting = asynchandler(async (req, res, next) => {
   let isImmediate;
   
   if (scheduledDate && scheduledTime) {
-    // New simple format: separate date and time
+    // New timezone-aware format: separate date and time
     try {
-      startTime = parseSimpleDateAndTime(scheduledDate, scheduledTime, dateFormat || "DD/MM/YYYY");
+      // Use moment timezone-aware parsing
+      startTime = parseWithAutoMomentTimezone(scheduledDate, scheduledTime, req, dateFormat || "DD/MM/YYYY");
+      
+      // Check if the scheduled time is in the past
+      if (startTime < now) {
+        const userTimezone = getUserTimezone(req);
+        throw new AppError(`Cannot schedule meeting in the past. Scheduled time: ${startTime.toLocaleString()} (${userTimezone}), Current time: ${now.toLocaleString()}`, 400);
+      }
+      
       const validation = validateMeetingDateTime(startTime, duration || 120);
       isImmediate = validation.isImmediate;
       
-      console.log(`📅 Parsed date/time: ${scheduledDate} ${scheduledTime} -> ${startTime.toLocaleString()}`);
+      const userTimezone = getUserTimezone(req);
     } catch (error) {
       throw new AppError(error.message, 400);
     }
   } else if (scheduledDate && !scheduledTime) {
     // Date provided but no time - default to current time or 00:00
     try {
-      const defaultTime = "00:00"; // You can change this to current time if preferred
-      startTime = parseSimpleDateAndTime(scheduledDate, defaultTime, dateFormat || "DD/MM/YYYY");
+      const defaultTime = "00:00";
+      startTime = parseWithAutoMomentTimezone(scheduledDate, defaultTime, req, dateFormat || "DD/MM/YYYY");
+      
+      // Check if the scheduled time is in the past
+      if (startTime < now) {
+        const userTimezone = getUserTimezone(req);
+        throw new AppError(`Cannot schedule meeting in the past. Scheduled date: ${scheduledDate} (${userTimezone}), Current time: ${now.toLocaleString()}`, 400);
+      }
+      
       const validation = validateMeetingDateTime(startTime, duration || 120);
       isImmediate = validation.isImmediate;
       
-      console.log(`📅 Parsed date with default time: ${scheduledDate} -> ${startTime.toLocaleString()}`);
+      const userTimezone = getUserTimezone(req);
     } catch (error) {
       throw new AppError(error.message, 400);
     }
@@ -75,10 +115,15 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     // Legacy ISO format support
     try {
       startTime = normalizeISODate(scheduledStartTime);
+      
+      // Check if the scheduled time is in the past
+      if (startTime < now) {
+        throw new AppError(`Cannot schedule meeting in the past. Scheduled time: ${scheduledStartTime}, Current time: ${now.toISOString()}`, 400);
+      }
+      
       const validation = validateMeetingDateTime(startTime, duration || 120);
       isImmediate = validation.isImmediate;
       
-      console.log(`📅 Parsed ISO date: ${scheduledStartTime} -> ${startTime.toLocaleString()}`);
     } catch (error) {
       throw new AppError(error.message, 400);
     }
@@ -86,7 +131,6 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     // No date/time provided - immediate meeting
     startTime = now;
     isImmediate = true;
-    console.log(`📅 Immediate meeting: ${startTime.toLocaleString()}`);
   }
 
   // Check for existing meetings
@@ -135,7 +179,7 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     await meeting.save();
 
     // Generate tracked URLs for attendance tracking
-    const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl();
     const apiBase = `${baseUrl}/api/v1`;
 
     const trackedInstructorURL = `${apiBase}/join/${meetingResponse.meetingID}/instructor/${instructorId}?role=instructor`;
@@ -209,11 +253,7 @@ export const createMeeting = asynchandler(async (req, res, next) => {
         type: 'meeting_created'
       });
       
-      console.log(`📢 Immediate meeting notifications sent to ${notificationResult.notificationsCreated} students with tracked URLs`);
-    } else {
-      console.log(`📅 Meeting scheduled for ${startTime.toLocaleString()}`);
-      console.log(`⏰ 3-minute reminder will be sent at ${new Date(startTime.getTime() - 3 * 60 * 1000).toLocaleString()}`);
-    }
+      }
 
     const message = isImmediate 
       ? `Meeting started! Tracked join URLs generated and notifications sent to ${notificationResult?.notificationsCreated || 0} students`
@@ -347,8 +387,8 @@ export const getMeetingDetails = asynchandler(async (req, res, next) => {
   }
 
   // Generate user-specific tracked URL
-  const baseUrl = process.env.APP_URL || 'http://localhost:3000';
-  const apiBase = `${baseUrl}/api/v1`;
+const baseUrl = getBaseUrl();
+const apiBase = `${baseUrl}/api/v1`;
   
   let userTrackedUrl = null;
   if (userRole === 'instructor') {

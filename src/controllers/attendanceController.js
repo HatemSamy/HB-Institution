@@ -196,6 +196,159 @@ export const markLessonAttendance = asynchandler(async (req, res) => {
 });
 
 /**
+ * Get simple attendance report - numbers only with details
+ */
+export const getSimpleAttendanceReport = asynchandler(async (req, res) => {
+  const { lessonId } = req.params;
+  const { groupId } = req.query;
+  const userRole = req.user.role;
+  const userId = req.user._id;
+
+  // Find the lesson
+  const lesson = await Lesson.findById(lessonId);
+  if (!lesson) {
+    throw new AppError('Lesson not found', 404);
+  }
+
+  // Find meeting for this lesson and group
+  let query = { lessonId };
+  if (groupId) query.groupId = groupId;
+
+  const meeting = await Meeting.findOne(query)
+    .populate('lessonId', 'title')
+    .populate('groupId', 'code')
+    .populate('instructorId', 'firstName lastName');
+
+  if (!meeting) {
+    return res.status(200).json({
+      success: true,
+      message: 'No meeting found for this lesson',
+      data: {
+        lesson: lesson.title,
+        group: groupId ? 'Unknown' : 'No group specified',
+        summary: {
+          present: 0,
+          late: 0,
+          absent: 0
+        },
+        details: {
+          late: [],
+          absent: []
+        }
+      }
+    });
+  }
+
+  // Check authorization for instructors
+  if (userRole === 'instructor' && !meeting.instructorId._id.equals(userId)) {
+    throw new AppError('You are not authorized to view this attendance report', 403);
+  }
+
+  // Get all enrolled students for this group (remove duplicates)
+  const enrolledStudents = await ClassSelectionModel.find({
+    groupId: meeting.groupId,
+    status: 'confirmed'
+  }).populate('studentId', 'firstName lastName email');
+
+  // Remove duplicate enrollments (same student enrolled multiple times)
+  const uniqueEnrollments = [];
+  const seenStudentIds = new Set();
+  
+  for (const enrollment of enrolledStudents) {
+    const studentId = enrollment.studentId._id.toString();
+    if (!seenStudentIds.has(studentId)) {
+      seenStudentIds.add(studentId);
+      uniqueEnrollments.push(enrollment);
+    }
+  }
+
+  console.log(`📊 Found ${enrolledStudents.length} enrollment records, ${uniqueEnrollments.length} unique students in group ${meeting.groupId.code}`);
+
+  // Get attendance records for this meeting (exclude instructor records)
+  const attendance = await Attendance.find({ 
+    meetingId: meeting.meetingID,
+    status: { $ne: 'instructor-joined' }
+  })
+    .populate('studentId', 'firstName lastName email')
+    .sort({ studentName: 1 });
+
+  console.log(`📊 Found ${attendance.length} attendance records for meeting ${meeting.meetingID}`);
+
+  // Create a map of students who have attendance records (remove duplicates)
+  const attendanceMap = new Map();
+  attendance.forEach(record => {
+    const studentId = record.studentId._id.toString();
+    // Keep the latest attendance record if there are duplicates
+    if (!attendanceMap.has(studentId) || record.joinTime > attendanceMap.get(studentId).joinTime) {
+      attendanceMap.set(studentId, record);
+    }
+  });
+
+  console.log(`📊 Unique attendance records: ${attendanceMap.size}`);
+
+  // Create complete attendance list including absent students
+  const completeAttendance = [];
+  
+  for (const enrollment of uniqueEnrollments) {
+    const studentId = enrollment.studentId._id.toString();
+    const studentName = `${enrollment.studentId.firstName} ${enrollment.studentId.lastName}`;
+    
+    if (attendanceMap.has(studentId)) {
+      // Student has an attendance record
+      completeAttendance.push(attendanceMap.get(studentId));
+      console.log(`✅ Student ${studentName} has attendance record: ${attendanceMap.get(studentId).status}`);
+    } else {
+      // Student is enrolled but has no attendance record - mark as absent
+      const absentRecord = {
+        studentId: enrollment.studentId,
+        studentName: studentName,
+        status: 'absent',
+        joinTime: null,
+        leaveTime: null,
+        duration: 0,
+        notes: 'Did not join the meeting'
+      };
+      completeAttendance.push(absentRecord);
+      console.log(`❌ Student ${studentName} marked as absent (no attendance record)`);
+    }
+  }
+
+  console.log(`📊 Complete attendance list: ${completeAttendance.length} students total`);
+
+  // Separate students by status
+  const presentStudents = completeAttendance.filter(a => a.status === 'present');
+  const lateStudents = completeAttendance.filter(a => a.status === 'late');
+  const absentStudents = completeAttendance.filter(a => a.status === 'absent');
+
+  // Format student details
+  const formatStudent = (record) => ({
+    name: record.studentName,
+    email: record.studentId?.email || (record.studentId ? record.studentId.email : 'No email'),
+    joinTime: record.joinTime,
+    notes: record.notes || null
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Simple attendance report retrieved successfully',
+    data: {
+      lesson: lesson.title,
+      group: meeting.groupId.code,
+      meetingDate: meeting.scheduledStartTime,
+      summary: {
+        present: presentStudents.length,
+        late: lateStudents.length,
+        absent: absentStudents.length
+      },
+      details: {
+        late: lateStudents.map(formatStudent),
+        absent: absentStudents.map(formatStudent)
+      }
+    }
+  });
+});
+
+/**
  * Export lesson attendance report
  */
 export const exportLessonAttendance = asynchandler(async (req, res) => {

@@ -33,7 +33,7 @@ router.route('/:lessonId')
   .put(
     Multer(fileValidation.pdf).single('resource'),
     protect,
-    authorize(AccessRoles.Admin),
+    authorize(AccessRoles.instructor),
     validation(lessonValidator.updateLessonSchema),
     lessonController.updateLesson
   )

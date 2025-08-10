@@ -105,8 +105,7 @@ export const parseSimpleDateAndTime = (dateString, timeString = "00:00", dateFor
       throw new Error('Invalid date - day does not exist in the specified month');
     }
     
-    console.log(`🕐 Date parsing: ${dateString} ${timeString} -> ${combinedDate.toLocaleString()} (stored as: ${combinedDate.toISOString()})`);
-    
+        
     return combinedDate;
     
   } catch (error) {

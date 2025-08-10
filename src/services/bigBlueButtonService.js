@@ -65,13 +65,11 @@ class BigBlueButtonService {
     this.init();
     try {
       const url = this.buildApiUrl('getMeetings');
-      console.log('Testing BBB connection to:', url);
-      const response = await axios.get(url, {
+            const response = await axios.get(url, {
         timeout: 10000,
         headers: { 'User-Agent': 'HB-Institution-BBB-Client' }
       });
-      console.log('BBB server connection test successful');
-      return response.status === 200;
+            return response.status === 200;
     } catch (error) {
       console.error('BBB server connection test failed:', error.message);
       console.error('BBB URL being used:', this.url);

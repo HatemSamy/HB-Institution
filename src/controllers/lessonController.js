@@ -120,7 +120,7 @@ export const getLessonDetails = asynchandler(async (req, res, next) => {
         select: 'title _id'
       }
     })
-    .select('-__v');
+    .select('-__v -passingScore -resources.public_id -resources.filename');
 
   if (!lesson) {
     throw new AppError('Lesson not found', 404);
@@ -187,10 +187,7 @@ export const getLessonDetails = asynchandler(async (req, res, next) => {
         group: meeting.groupId.code,
         instructor: `${meeting.instructorId.firstName} ${meeting.instructorId.lastName}`,
         isRunning: isRunning,
-        meetingUrl: meetingUrl, // DIRECT TRACKED URL - READY TO USE
-        canJoin: canJoin,
-        canStart: canStart,
-        trackingEnabled: true,
+        meetingUrl: meetingUrl, 
         attendanceTracking: 'url-based'
       };
     }

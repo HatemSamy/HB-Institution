@@ -104,10 +104,7 @@ export const parseInstructorLocalTime = (dateString, timeString = "00:00", dateF
     }
     
     // Log for debugging
-    console.log(`📅 Instructor entered: ${dateString} ${timeString}`);
-    console.log(`📅 Parsed as LOCAL time: ${localDate.toLocaleString()}`);
-    console.log(`📅 Will be stored as UTC: ${localDate.toISOString()}`);
-    
+        
     return localDate;
     
   } catch (error) {
@@ -124,10 +121,7 @@ export const parseInstructorLocalTime = (dateString, timeString = "00:00", dateF
 export const calculateLocalReminderTime = (meetingLocalTime, minutesBefore = 2) => {
   const reminderTime = new Date(meetingLocalTime.getTime() - minutesBefore * 60 * 1000);
   
-  console.log(`⏰ Meeting time (local): ${meetingLocalTime.toLocaleString()}`);
-  console.log(`⏰ Reminder time (local): ${reminderTime.toLocaleString()}`);
-  console.log(`⏰ Reminder will be sent ${minutesBefore} minutes before meeting`);
-  
+    
   return reminderTime;
 };
 
@@ -143,13 +137,7 @@ export const shouldSendReminderNow = (reminderTime, currentTime = new Date()) =>
   
   const shouldSend = timeDiff <= oneMinute;
   
-  if (shouldSend) {
-    console.log(`📢 Reminder should be sent now!`);
-    console.log(`📢 Current time: ${currentTime.toLocaleString()}`);
-    console.log(`📢 Reminder time: ${reminderTime.toLocaleString()}`);
-    console.log(`📢 Time difference: ${Math.round(timeDiff / 1000)} seconds`);
-  }
-  
+    
   return shouldSend;
 };
 
