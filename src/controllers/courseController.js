@@ -305,52 +305,67 @@ export const rateCourse = asynchandler(async (req, res, next) => {
 export const getInstructorsByCourseAndLevel = asynchandler(async (req, res, next) => {
   const { courseId, level } = req.params;
 
-  const groups = await Group.find({ courseId, level })
+  // Find active groups for the course and level
+  const groups = await Group.find({ 
+    courseId, 
+    level, 
+    isActive: true 
+  })
     .populate({
       path: 'instructorId',
       match: {
         role: 'instructor',
-        isActive: true,
         isBlocked: false
       },
       select: 'firstName lastName email specialization avatar'
     });
 
-  if (!groups.length) {
+  // Filter out groups where instructor population failed (due to match conditions)
+  const validGroups = groups.filter(group => group.instructorId);
+
+  if (!validGroups.length) {
     return next(new AppError('No instructors found for this course and level', 404));
   }
 
-  const instructors = groups
-    .map(group => group.instructorId)
-    .filter(ins => ins);
+  // Remove duplicate instructors using Map to ensure uniqueness
+  const instructorMap = new Map();
+  validGroups.forEach(group => {
+    const instructor = group.instructorId;
+    if (!instructorMap.has(instructor._id.toString())) {
+      instructorMap.set(instructor._id.toString(), {
+        _id: instructor._id,
+        name: `${instructor.firstName} ${instructor.lastName}`,
+        firstName: instructor.firstName,
+        lastName: instructor.lastName,
+        email: instructor.email,
+        specialization: instructor.specialization,
+        avatar: instructor.avatar
+      });
+    }
+  });
 
-  const formattedInstructors = instructors.map(ins => ({
-    _id: ins._id,
-    name: `${ins.firstName} ${ins.lastName}`,
-    firstName: ins.firstName,
-    lastName: ins.lastName,
-    email: ins.email,
-    specialization: ins.specialization,
-    avatar: ins.avatar
+  const uniqueInstructors = Array.from(instructorMap.values());
+
+  const formattedGroups = validGroups.map(g => ({
+    _id: g._id,
+    code: g.code,
+    courseId: g.courseId,
+    level: g.level,
+    schedule: g.schedule,
+    maxStudents: g.maxStudents,
+    currentStudents: g.currentStudents,
+    isAvailable: g.currentStudents < g.maxStudents,
+    instructorId: g.instructorId._id,
+    instructorName: `${g.instructorId.firstName} ${g.instructorId.lastName}`
   }));
-
-  const formattedGroups = groups
-    .filter(g => g.instructorId)
-    .map(g => ({
-      _id: g._id,
-      code: g.code,
-      courseId: g.courseId,
-      level: g.level,
-      schedule: g.schedule,
-      instructorId: g.instructorId._id,
-      instructorName: `${g.instructorId.firstName} ${g.instructorId.lastName}`
-    }));
 
   res.json({
     success: true,
     data: {
-      instructors: formattedInstructors,
-      groups: formattedGroups
+      instructors: uniqueInstructors,
+      groups: formattedGroups,
+      totalInstructors: uniqueInstructors.length,
+      totalGroups: formattedGroups.length
     }
   });
 });
