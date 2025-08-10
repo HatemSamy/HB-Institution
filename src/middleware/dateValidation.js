@@ -87,10 +87,9 @@ export const parseSimpleDateAndTime = (dateString, timeString = "00:00", dateFor
       }
     }
     
-    // SIMPLE FIX: Create date using ISO string to preserve exact time
-    // This treats the input as the exact time the instructor wants
-    const isoString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-    const combinedDate = new Date(isoString);
+    // Create date using UTC to avoid timezone issues
+    // This ensures consistent behavior across different server timezones
+    const combinedDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
     
     // Validate the created date
     if (isNaN(combinedDate.getTime())) {

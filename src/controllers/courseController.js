@@ -137,7 +137,7 @@ export const getGroupsByCourseAndInstructor = asynchandler(async (req, res, next
   })
     .populate('courseId', 'title')
     .populate('instructorId', 'firstName lastName email')
-    .select('name maxStudents currentStudents schedule');
+    .select('code maxStudents currentStudents schedule');
 
   if (!groups.length) {
     return next(new AppError('Groups not found', 404));
@@ -145,6 +145,11 @@ export const getGroupsByCourseAndInstructor = asynchandler(async (req, res, next
 
   const groupsWithAvailability = groups.map(group => ({
     ...group.toObject(),
+    title: group.code, // Group title (using code as title)
+    course: {
+      _id: group.courseId._id,
+      title: group.courseId.title
+    },
     instructor: {
       _id: group.instructorId._id,
       name: `${group.instructorId.firstName} ${group.instructorId.lastName}`,

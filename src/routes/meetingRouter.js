@@ -3,6 +3,7 @@ import * as meetingController from '../controllers/meetingController.js';
 import { authorize, protect } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
 import { validateMeetingDates } from '../middleware/dateValidation.js';
+import { addMomentTimezoneSupport } from '../middleware/momentTimezone.js';
 
 const router = express.Router({ mergeParams: true });
 
@@ -11,7 +12,8 @@ router.post(
   '/create',
   protect,
   authorize(AccessRoles.instructor),
-  validateMeetingDates, // Add date validation middleware
+  addMomentTimezoneSupport, // Add timezone support middleware FIRST
+  validateMeetingDates, // Then add date validation middleware
   meetingController.createMeeting
 );
 

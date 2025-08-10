@@ -79,22 +79,38 @@ export const createMeeting = asynchandler(async (req, res, next) => {
   let startTime;
   let isImmediate;
   
-  if (scheduledDate && scheduledTime) {
+  if (req.body.scheduledStartTime && req.body._parsedTimezone) {
+    // Timezone middleware has already processed the date
+    startTime = req.body.scheduledStartTime;
+    const userTimezone = req.body._parsedTimezone;
+    
+    console.log(`[TIMEZONE DEBUG] Using timezone-processed date: ${startTime.toISOString()} (from ${userTimezone})`);
+    
+    // Check if the scheduled time is in the past
+    if (startTime < now) {
+      throw new AppError(`Cannot schedule meeting in the past. Scheduled time: ${req.body._originalLocalTime} (${userTimezone}), Current time: ${now.toLocaleString()}`, 400);
+    }
+    
+    const validation = validateMeetingDateTime(startTime, duration || 120);
+    isImmediate = validation.isImmediate;
+    
+  } else if (scheduledDate && scheduledTime) {
     // New timezone-aware format: separate date and time
     try {
       // Use moment timezone-aware parsing
       startTime = parseWithAutoMomentTimezone(scheduledDate, scheduledTime, req, dateFormat || "DD/MM/YYYY");
+      const userTimezone = getUserTimezone(req);
+      
+      console.log(`[TIMEZONE DEBUG] Parsed date/time: ${scheduledDate} ${scheduledTime} (${userTimezone}) -> ${startTime.toISOString()}`);
       
       // Check if the scheduled time is in the past
       if (startTime < now) {
-        const userTimezone = getUserTimezone(req);
         throw new AppError(`Cannot schedule meeting in the past. Scheduled time: ${startTime.toLocaleString()} (${userTimezone}), Current time: ${now.toLocaleString()}`, 400);
       }
       
       const validation = validateMeetingDateTime(startTime, duration || 120);
       isImmediate = validation.isImmediate;
       
-      const userTimezone = getUserTimezone(req);
     } catch (error) {
       throw new AppError(error.message, 400);
     }
@@ -103,17 +119,18 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     try {
       const defaultTime = "00:00";
       startTime = parseWithAutoMomentTimezone(scheduledDate, defaultTime, req, dateFormat || "DD/MM/YYYY");
+      const userTimezone = getUserTimezone(req);
+      
+      console.log(`[TIMEZONE DEBUG] Parsed date only: ${scheduledDate} (${userTimezone}) -> ${startTime.toISOString()}`);
       
       // Check if the scheduled time is in the past
       if (startTime < now) {
-        const userTimezone = getUserTimezone(req);
         throw new AppError(`Cannot schedule meeting in the past. Scheduled date: ${scheduledDate} (${userTimezone}), Current time: ${now.toLocaleString()}`, 400);
       }
       
       const validation = validateMeetingDateTime(startTime, duration || 120);
       isImmediate = validation.isImmediate;
       
-      const userTimezone = getUserTimezone(req);
     } catch (error) {
       throw new AppError(error.message, 400);
     }
@@ -121,6 +138,8 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     // Legacy ISO format support
     try {
       startTime = normalizeISODate(scheduledStartTime);
+      
+      console.log(`[TIMEZONE DEBUG] Legacy ISO format: ${scheduledStartTime} -> ${startTime.toISOString()}`);
       
       // Check if the scheduled time is in the past
       if (startTime < now) {
@@ -137,6 +156,7 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     // No date/time provided - immediate meeting
     startTime = now;
     isImmediate = true;
+    console.log(`[TIMEZONE DEBUG] Immediate meeting: ${startTime.toISOString()}`);
   }
 
   // Check for existing meetings
