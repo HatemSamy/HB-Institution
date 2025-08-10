@@ -23,10 +23,30 @@ export const parseWithMomentTimezone = (dateString, timeString = "00:00", timezo
     
     // Combine date and time
     const dateTimeString = `${dateString} ${timeString}`;
-    const momentFormat = `${momentDateFormat} h:mm A`;
     
-    // Parse in the specified timezone
-    const momentInTimezone = moment.tz(dateTimeString, momentFormat, timezone);
+    // Try multiple time formats
+    const timeFormats = [
+      `${momentDateFormat} h:mm A`,    // 12-hour with AM/PM
+      `${momentDateFormat} HH:mm`,     // 24-hour format
+      `${momentDateFormat} H:mm`,      // 24-hour format (single digit hour)
+      `${momentDateFormat} h:mm`,      // 12-hour without AM/PM
+    ];
+    
+    let momentInTimezone;
+    let parseSuccess = false;
+    
+    // Try each format until one works
+    for (const format of timeFormats) {
+      momentInTimezone = moment.tz(dateTimeString, format, timezone);
+      if (momentInTimezone.isValid()) {
+        parseSuccess = true;
+        break;
+      }
+    }
+    
+    if (!parseSuccess) {
+      throw new Error(`Invalid date/time format: ${dateTimeString}. Supported formats: "h:mm AM/PM", "HH:mm", "H:mm"`);
+    }
     
     // Check if parsing was successful
     if (!momentInTimezone.isValid()) {
@@ -100,11 +120,12 @@ export const addMomentTimezoneSupport = (req, res, next) => {
     // If scheduledDate and scheduledTime are provided, parse with moment-timezone
     if (req.body.scheduledDate && req.body.scheduledTime) {
       const timezone = getUserTimezone(req);
+      
       const utcDate = parseWithMomentTimezone(
         req.body.scheduledDate,
         req.body.scheduledTime,
         timezone,
-        req.body.dateFormat
+        req.body.dateFormat || "DD/MM/YYYY"
       );
       
       // Replace the original scheduledStartTime with timezone-aware UTC date
@@ -113,8 +134,7 @@ export const addMomentTimezoneSupport = (req, res, next) => {
       // Store timezone info for later use
       req.body._parsedTimezone = timezone;
       req.body._originalLocalTime = `${req.body.scheduledDate} ${req.body.scheduledTime}`;
-      
-          }
+    }
     
     next();
   } catch (error) {

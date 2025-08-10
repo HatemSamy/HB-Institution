@@ -84,8 +84,6 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     startTime = req.body.scheduledStartTime;
     const userTimezone = req.body._parsedTimezone;
     
-    console.log(`[TIMEZONE DEBUG] Using timezone-processed date: ${startTime.toISOString()} (from ${userTimezone})`);
-    
     // Check if the scheduled time is in the past
     if (startTime < now) {
       throw new AppError(`Cannot schedule meeting in the past. Scheduled time: ${req.body._originalLocalTime} (${userTimezone}), Current time: ${now.toLocaleString()}`, 400);
@@ -100,8 +98,6 @@ export const createMeeting = asynchandler(async (req, res, next) => {
       // Use moment timezone-aware parsing
       startTime = parseWithAutoMomentTimezone(scheduledDate, scheduledTime, req, dateFormat || "DD/MM/YYYY");
       const userTimezone = getUserTimezone(req);
-      
-      console.log(`[TIMEZONE DEBUG] Parsed date/time: ${scheduledDate} ${scheduledTime} (${userTimezone}) -> ${startTime.toISOString()}`);
       
       // Check if the scheduled time is in the past
       if (startTime < now) {
@@ -121,8 +117,6 @@ export const createMeeting = asynchandler(async (req, res, next) => {
       startTime = parseWithAutoMomentTimezone(scheduledDate, defaultTime, req, dateFormat || "DD/MM/YYYY");
       const userTimezone = getUserTimezone(req);
       
-      console.log(`[TIMEZONE DEBUG] Parsed date only: ${scheduledDate} (${userTimezone}) -> ${startTime.toISOString()}`);
-      
       // Check if the scheduled time is in the past
       if (startTime < now) {
         throw new AppError(`Cannot schedule meeting in the past. Scheduled date: ${scheduledDate} (${userTimezone}), Current time: ${now.toLocaleString()}`, 400);
@@ -139,8 +133,6 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     try {
       startTime = normalizeISODate(scheduledStartTime);
       
-      console.log(`[TIMEZONE DEBUG] Legacy ISO format: ${scheduledStartTime} -> ${startTime.toISOString()}`);
-      
       // Check if the scheduled time is in the past
       if (startTime < now) {
         throw new AppError(`Cannot schedule meeting in the past. Scheduled time: ${scheduledStartTime}, Current time: ${now.toISOString()}`, 400);
@@ -156,7 +148,6 @@ export const createMeeting = asynchandler(async (req, res, next) => {
     // No date/time provided - immediate meeting
     startTime = now;
     isImmediate = true;
-    console.log(`[TIMEZONE DEBUG] Immediate meeting: ${startTime.toISOString()}`);
   }
 
   // Check for existing meetings

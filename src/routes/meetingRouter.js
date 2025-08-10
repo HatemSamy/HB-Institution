@@ -25,6 +25,35 @@ router.get(
   meetingController.getInstructorMeetings
 );
 
+// Test timezone conversion endpoint
+router.post(
+  '/test-timezone',
+  protect,
+  addMomentTimezoneSupport,
+  (req, res) => {
+    res.json({
+      success: true,
+      message: 'Timezone test completed',
+      data: {
+        originalBody: {
+          scheduledDate: req.body.scheduledDate,
+          scheduledTime: req.body.scheduledTime,
+          timezone: req.body.timezone
+        },
+        processedData: {
+          scheduledStartTime: req.body.scheduledStartTime,
+          parsedTimezone: req.body._parsedTimezone,
+          originalLocalTime: req.body._originalLocalTime
+        },
+        serverInfo: {
+          serverTime: new Date().toISOString(),
+          serverTimezone: process.env.TZ || 'Not set'
+        }
+      }
+    });
+  }
+);
+
 
 
 export default router;
