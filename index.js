@@ -37,8 +37,13 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
-app.use(cors({}));
+// CORS configuration - Open for testing
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: false
+}));
 
 // Logging middleware
 if (process.env.NODE_ENV === 'DEV') {
@@ -111,12 +116,13 @@ const PORT = process.env.PORT || 5000;
 // Create HTTP server
 const httpServer = createServer(app);
 
-// Initialize Socket.IO with Vercel-compatible settings
+// Initialize Socket.IO with open CORS for testing
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "*",
-    methods: ["GET", "POST"],
-    credentials: true
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["*"],
+    credentials: false
   },
   transports: ['polling'], // Force polling for Vercel compatibility
   allowEIO3: true,
