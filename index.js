@@ -1,4 +1,6 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -21,7 +23,8 @@ import notificationRoutes from './src/routes/notificationRouter.js';
 import ClassSelectionRoutes from './src/routes/ClassSelectionRouter.js';
 import attendanceRoutes from './src/routes/attendanceRouter.js';
 import joinTrackingRoutes from './src/routes/joinTrackingRouter.js';
-import { globalErrorHandling } from './src/middleware/erroeHandling.js'
+import { globalErrorHandling } from './src/middleware/erroeHandling.js';
+import socketService from './src/services/socketService.js';
 
 // Load env vars
 dotenv.config();
@@ -105,8 +108,31 @@ app.use(globalErrorHandling);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Initialize Socket.IO with Vercel-compatible settings
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ['polling'], // Force polling for Vercel compatibility
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
+
+// Initialize socket service
+socketService.init(io);
+
+// Make io instance available globally
+global.io = io;
+
+httpServer.listen(PORT, async () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`🔌 Socket.IO server initialized`);
   try {
     const { default: MeetingScheduler } = await import('./src/services/meetingScheduler.js');
     MeetingScheduler.init();

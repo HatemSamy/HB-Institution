@@ -22,6 +22,14 @@ router.get(
   notificationController.getMeetingNotifications
 );
 
+// Test endpoint for Vercel - send meeting reminders manually
+router.post(
+  '/test-reminder/:meetingId',
+  protect,
+  authorize(AccessRoles.instructor),
+  notificationController.testMeetingReminder
+);
+
 // Delete all notifications for user
 router.delete(
   '/all',

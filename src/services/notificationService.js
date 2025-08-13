@@ -4,6 +4,7 @@ import Lesson from '../models/Lesson.js';
 import Meeting from '../models/Meeting.js';
 import Group from '../models/Group.js';
 import bigBlueButtonService from './bigBlueButtonService.js';
+import socketService from './socketService.js';
 
 /**
  * Create meeting notifications for all students in a group
@@ -243,6 +244,24 @@ export const sendMeetingReminders = async (meetingId, instructorId) => {
       type: 'meeting_reminder',
       scheduledTime: meeting.scheduledStartTime
     });
+
+    try {
+      if (result.notifications && result.notifications.length > 0) {
+        for (const notification of result.notifications) {
+          socketService.sendMeetingReminder(notification.recipientId, {
+            meetingId: meeting.meetingID,
+            lessonTitle: meeting.title,
+            instructorName: instructorFullName,
+            groupCode: meeting.groupId.code,
+            joinURL: notification.relatedData?.joinURL,
+            scheduledTime: meeting.scheduledStartTime
+          });
+        }
+        console.log(`⏰ Sent meeting reminder events to ${result.notifications.length} users`);
+      }
+    } catch (error) {
+      console.error('Failed to send real-time meeting reminders:', error);
+    }
 
     return result;
   } catch (error) {

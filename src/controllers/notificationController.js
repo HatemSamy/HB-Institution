@@ -206,3 +206,21 @@ export const deleteAllNotifications = asynchandler(async (req, res, next) => {
     }
   });
 });
+
+export const testMeetingReminder = asynchandler(async (req, res, next) => {
+  const { meetingId } = req.params;
+  const instructorId = req.user._id;
+
+  const result = await NotificationService.sendMeetingReminders(meetingId, instructorId);
+
+  res.status(200).json({
+    success: true,
+    message: 'Test meeting reminders sent successfully (Vercel testing)',
+    data: {
+      notificationsSent: result.notifications?.length || 0,
+      meetingId: meetingId,
+      platform: 'Vercel (Polling mode)'
+    }
+  });
+});
+

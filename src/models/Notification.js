@@ -258,7 +258,36 @@ notificationSchema.statics.createMeetingNotification = async function(data) {
     expiresAt
   });
 
-  return await notification.save();
+  const savedNotification = await notification.save();
+
+  // Emit real-time notification via Socket.IO only for meeting reminders
+  if (type === 'meeting_reminder') {
+    try {
+      // Import socketService dynamically to avoid circular dependency
+      const { default: socketService } = await import('../services/socketService.js');
+
+      // Populate sender information for the socket emission
+      await savedNotification.populate('senderId', 'firstName lastName');
+
+      // Send real-time meeting reminder to the user
+      socketService.sendMeetingReminder(recipientId, {
+        meetingId,
+        lessonTitle,
+        instructorName,
+        groupCode,
+        joinURL,
+        scheduledTime,
+        message: savedNotification.message
+      });
+
+      console.log(`⏰ Real-time meeting reminder sent to user ${recipientId}`);
+    } catch (error) {
+      console.error('Failed to send real-time meeting reminder:', error);
+      // Don't throw error - notification was saved successfully
+    }
+  }
+
+  return savedNotification;
 };
 
 // Static method to get user notifications

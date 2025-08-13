@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel Socket.IO Test - Meeting Reminders</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected { background: #c8e6c9; color: #2e7d32; }
+        .disconnected { background: #ffcdd2; color: #c62828; }
+        .connecting { background: #fff3e0; color: #ef6c00; }
+        
+        .reminder {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .reminder.urgent {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1976d2; }
+        button.join { background: #4caf50; }
+        button.join:hover { background: #388e3c; }
+        
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Vercel Socket.IO Test - Meeting Reminders</h1>
+        <p><strong>Note:</strong> This is for testing only. Expect 3-5 second delays due to polling mode.</p>
+        
+        <div>
+            <h3>Authentication</h3>
+            <input type="text" id="tokenInput" placeholder="Enter your JWT token here..." />
+            <button onclick="connect()">Connect to Vercel</button>
+            <button onclick="disconnect()">Disconnect</button>
+        </div>
+        
+        <div id="connectionStatus" class="status disconnected">
+            ❌ Disconnected from Vercel
+        </div>
+        
+        <div>
+            <h3>Test Meeting Reminder</h3>
+            <input type="text" id="meetingIdInput" placeholder="Enter Meeting ID for testing..." />
+            <button onclick="sendTestReminder()">Send Test Reminder</button>
+        </div>
+        
+        <div>
+            <h3>Received Reminders</h3>
+            <div id="reminders"></div>
+        </div>
+        
+        <div>
+            <h3>Connection Log</h3>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <!-- Socket.IO Client Library -->
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    
+    <script>
+        let socket = null;
+        let serverUrl = window.location.origin; // Use current Vercel URL
+        
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(status, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.className = `status ${status}`;
+            statusDiv.innerHTML = message;
+        }
+        
+        function connect() {
+            const token = document.getElementById('tokenInput').value.trim();
+            
+            if (!token) {
+                alert('Please enter your JWT token');
+                return;
+            }
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            updateStatus('connecting', '🔄 Connecting to Vercel...');
+            log('Attempting to connect to Vercel server...');
+            log(`Server URL: ${serverUrl}`);
+            
+            // Create socket connection with polling only (Vercel compatible)
+            socket = io(serverUrl, {
+                transports: ['polling'], // Only polling for Vercel
+                upgrade: false,
+                timeout: 20000,
+                forceNew: true
+            });
+            
+            // Connection events
+            socket.on('connect', () => {
+                log('✅ Connected to Vercel server (polling mode)');
+                updateStatus('connecting', '🔄 Authenticating...');
+                socket.emit('authenticate', token);
+            });
+            
+            socket.on('authenticated', (data) => {
+                log(`✅ Authenticated as: ${data.user.firstName} ${data.user.lastName}`);
+                updateStatus('connected', `✅ Connected to Vercel as ${data.user.firstName}`);
+                socket.emit('join_notifications');
+            });
+            
+            socket.on('joined_notifications', (data) => {
+                log(`📢 Joined notifications room: ${data.room}`);
+                log('🎯 Ready to receive meeting reminders (with polling delay)');
+            });
+            
+            socket.on('auth_error', (error) => {
+                log(`❌ Authentication failed: ${error.message}`);
+                updateStatus('disconnected', '❌ Authentication Failed');
+                alert('Authentication failed. Please check your token.');
+            });
+            
+            socket.on('disconnect', () => {
+                log('❌ Disconnected from Vercel server');
+                updateStatus('disconnected', '❌ Disconnected from Vercel');
+            });
+            
+            socket.on('connect_error', (error) => {
+                log(`❌ Connection error: ${error.message}`);
+                updateStatus('disconnected', '❌ Connection Error');
+            });
+            
+            // Meeting reminder event
+            socket.on('meeting_reminder', (reminder) => {
+                log(`⏰ Meeting reminder received: ${reminder.lessonTitle}`);
+                displayReminder(reminder);
+                
+                // Show browser notification
+                if (Notification.permission === 'granted') {
+                    new Notification(`Meeting Reminder: ${reminder.lessonTitle}`, {
+                        body: `Your lesson with ${reminder.instructorName} starts soon!`,
+                        requireInteraction: true
+                    });
+                }
+            });
+        }
+        
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                log('🔌 Manually disconnected from Vercel');
+            }
+        }
+        
+        function displayReminder(reminder) {
+            const remindersDiv = document.getElementById('reminders');
+            
+            const reminderDiv = document.createElement('div');
+            reminderDiv.className = 'reminder urgent';
+            
+            let joinButton = '';
+            if (reminder.joinURL) {
+                joinButton = `<button class="join" onclick="window.open('${reminder.joinURL}', '_blank')">Join Meeting</button>`;
+            }
+            
+            reminderDiv.innerHTML = `
+                <h4>⏰ ${reminder.lessonTitle}</h4>
+                <p><strong>Instructor:</strong> ${reminder.instructorName}</p>
+                <p><strong>Group:</strong> ${reminder.groupCode}</p>
+                <p><strong>Message:</strong> ${reminder.message}</p>
+                <p><strong>Received:</strong> ${new Date().toLocaleString()}</p>
+                ${joinButton}
+            `;
+            
+            remindersDiv.insertBefore(reminderDiv, remindersDiv.firstChild);
+        }
+        
+        async function sendTestReminder() {
+            const meetingId = document.getElementById('meetingIdInput').value.trim();
+            const token = document.getElementById('tokenInput').value.trim();
+            
+            if (!meetingId || !token) {
+                alert('Please enter both JWT token and Meeting ID');
+                return;
+            }
+            
+            try {
+                log(`🧪 Sending test reminder for meeting: ${meetingId}`);
+                
+                const response = await fetch(`${serverUrl}/api/v1/notifications/test-reminder/${meetingId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(`✅ Test reminder sent successfully: ${result.data.notificationsSent} notifications`);
+                } else {
+                    log(`❌ Failed to send test reminder: ${result.message}`);
+                }
+            } catch (error) {
+                log(`❌ Error sending test reminder: ${error.message}`);
+            }
+        }
+        
+        // Request notification permission on page load
+        window.addEventListener('load', () => {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+            
+            log('🚀 Vercel Socket.IO test page loaded');
+            log('📝 Enter your JWT token and click Connect to start testing');
+            log('⚠️ Note: Expect 3-5 second delays due to polling mode on Vercel');
+        });
+    </script>
+</body>
+</html>
