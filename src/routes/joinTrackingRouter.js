@@ -10,7 +10,6 @@ import { AccessRoles } from '../utils/helpers.js';
 
 const router = express.Router();
 
-// Public route for join tracking (no auth required for the redirect)
 // This is the URL students will click to join meetings
 router.get('/join/:meetingId/:role/:userId', trackAndRedirectToMeeting);
 

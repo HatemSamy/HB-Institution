@@ -12,7 +12,7 @@ export async function sendEmail(dest, subject, message , attachments=[]) {
 
     // send mail with defined transport object
     let info = await transporter.sendMail({
-        from: `"Route" < ${process.env.nodeMailerEmail}>`, // sender address
+        from: `"Hatem-Samy" < ${process.env.nodeMailerEmail}>`, // sender address
         to: dest, // list of receivers
         subject, // Subject line
         html: message, // html body

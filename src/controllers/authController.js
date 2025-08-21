@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import { sendEmail } from "../utils/email.js";
 import sendTokenResponse from "../utils/generateToken.js";
 import { AppError, asynchandler } from "../middleware/erroeHandling.js";
+import { generateConfirmationEmailTemplate } from "../templates/confirmationEmailTemplate.js";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
@@ -30,10 +31,16 @@ export const registerUser = asynchandler(async (req, res, next) => {
   );
 
   const confirmLink = `${req.protocol}://${req.headers.host}${process.env.BASEURL}/auth/confirmEmail/${token}`
-  
-  const message = `<a href="${confirmLink}">Confirm your email</a>`;
 
-  const info = await sendEmail(req.body.email, 'Confirm Email', message);
+  // Generate beautiful HTML email template
+  const userName = `${firstName} ${lastName}`;
+  const emailTemplate = generateConfirmationEmailTemplate(userName, confirmLink);
+
+  const info = await sendEmail(
+    req.body.email,
+    '🎓 Welcome to HB Institution - Confirm Your Email',
+    emailTemplate
+  );
 
   if (info?.accepted?.length) {
     const savedUser = await newUser.save();

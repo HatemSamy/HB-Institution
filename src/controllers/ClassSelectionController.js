@@ -3,6 +3,7 @@ import ClassSelectionModel from "../models/ClassSelection.js";
 import Group from "../models/Group.js";
 import { addHistory } from "../services/history.service.js";
 import { sendEmail } from "../utils/email.js";
+import { generateClassSelectionEmailTemplate } from "../templates/classSelectionEmailTemplate.js";
 import mongoose from 'mongoose';
 import { HISTORY_ACTIONS } from "../utils/historyActions.js";
 
@@ -87,28 +88,24 @@ await addHistory({
   }
 });
   
-    const htmlMessage = `
-      <h2>Class Selection Confirmation</h2>
-      <p>Dear ${student.firstName},</p>
-      <p>You have successfully selected a class for:</p>
-      <ul>
-        <li><strong>Course:</strong> ${course.title}</li>
-        <li><strong>Instructor:</strong> ${instructor.firstName} ${instructor.lastName}</li>
-        <li><strong>Level:</strong> ${level}</li>
-        <li><strong>Group Code:</strong> ${groupData.code}</li>
-        <li><strong>Schedule:</strong>
-          <ul>
-            ${groupData.schedule.map(s =>
-              `<li>${s.dayOfWeek}: ${s.startTime} - ${s.endTime} (${s.timezone})</li>`
-            ).join('')}
-          </ul>
-        </li>
-      </ul>
-      <p>Status: <strong>${populatedSelection.status}</strong></p>
-      <p>Thank you for your selection.</p>
-    `;
+    // Generate beautiful HTML email template
+    const studentName = `${student.firstName} ${student.lastName}`;
+    const instructorName = `${instructor.firstName} ${instructor.lastName}`;
+    const emailTemplate = generateClassSelectionEmailTemplate(
+      studentName,
+      course.title,
+      instructorName,
+      level,
+      groupData.code,
+      groupData.schedule,
+      populatedSelection.status
+    );
 
-    await sendEmail(student.email, 'Class Selection Confirmation', htmlMessage);
+    await sendEmail(
+      student.email,
+      '📚 Class Selection Confirmed - HB Institution',
+      emailTemplate
+    );
 
    res.status(201).json({
   success: true,
