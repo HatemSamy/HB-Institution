@@ -1,6 +1,6 @@
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
+// import { createServer } from 'http';
+// import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -24,7 +24,7 @@ import ClassSelectionRoutes from './src/routes/ClassSelectionRouter.js';
 import attendanceRoutes from './src/routes/attendanceRouter.js';
 import joinTrackingRoutes from './src/routes/joinTrackingRouter.js';
 import { globalErrorHandling } from './src/middleware/erroeHandling.js';
-import socketService from './src/services/socketService.js';
+// import socketService from './src/services/socketService.js';
 
 // Load env vars
 dotenv.config();
@@ -114,31 +114,32 @@ app.use(globalErrorHandling);
 const PORT = process.env.PORT || 5000;
 
 // Create HTTP server
-const httpServer = createServer(app);
+// const httpServer = createServer(app);
 
 // Initialize Socket.IO with open CORS for testing
-const io = new Server(httpServer, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["*"],
-    credentials: false
-  },
-  transports: ['polling'], // Force polling for Vercel compatibility
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000
-});
+// const io = new Server(httpServer, {
+//   cors: {
+//     origin: "*",
+//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["*"],
+//     credentials: false
+//   },
+//   transports: ['polling'], // Force polling for Vercel compatibility
+//   allowEIO3: true,
+//   pingTimeout: 60000,
+//   pingInterval: 25000
+// });
 
 // Initialize socket service
-socketService.init(io);
+// socketService.init(io);
 
 // Make io instance available globally
-global.io = io;
+// global.io = io;
 
-httpServer.listen(PORT, async () => {
+// httpServer.listen(PORT, async () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log(`🔌 Socket.IO server initialized`);
+  // console.log(`🔌 Socket.IO server initialized`);
   try {
     const { default: MeetingScheduler } = await import('./src/services/meetingScheduler.js');
     MeetingScheduler.init();
