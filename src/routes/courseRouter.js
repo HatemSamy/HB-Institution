@@ -2,9 +2,9 @@ import express from 'express';
 import * as courseController from '../controllers/courseController.js';
 import { authorize, protect } from '../middleware/auth.js';
 import { AccessRoles } from '../utils/helpers.js';
-import { fileValidation, HME, Multer, myMulter, pathName } from '../utils/multer.js';
+import { fileValidation, HME, Multer } from '../utils/multer.js';
 import { validation } from '../middleware/validation.js';
-import { ratingParamsSchema } from '../validations/CourseValidation.js';
+import { ratingParamsSchema, updateCourseSchema } from '../validations/CourseValidation.js';
 
 const router = express.Router();
 
@@ -16,8 +16,11 @@ router.put('/:courseId/rating/:rating', protect, validation(ratingParamsSchema),
 
 router.post('/:CategoryId', protect, Multer(fileValidation.image).single('image'), HME, courseController.createCourse);
 
+// Update course endpoint - update existing course only
+router.put('/:id', protect,authorize(AccessRoles.Admin), Multer(fileValidation.image).single('image'), HME, validation(updateCourseSchema), courseController.updateCourse);
+
 router.get('/:id', courseController.getCourseById);
-router.get('/', courseController.getAllCourses);   
+router.get('/', courseController.getAllCourses);
 router.delete('/:id',protect,authorize(AccessRoles.Admin) ,courseController.deleteCourse);
  
 

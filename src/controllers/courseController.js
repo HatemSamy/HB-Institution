@@ -81,7 +81,6 @@ export const getCourseById = asynchandler(async (req, res, next) => {
 });
 
 
-// 1. GET ALL COURSES
 export const getAllCourses = asynchandler(async (req, res) => {
 
   const courses = await Course.find().select('-CreatedBy -createdAt -updatedAt')
@@ -101,7 +100,6 @@ export const getAllCourses = asynchandler(async (req, res) => {
 
 
 
-// 2. GET LEVELS BY COURSE
 export const GetLevelByCourse = asynchandler(async (req, res) => {
   const { courseId } = req.params;
 
@@ -125,7 +123,6 @@ export const GetLevelByCourse = asynchandler(async (req, res) => {
 
 
 
-// 4. GET GROUPS BY COURSE, LEVEL, AND INSTRUCTOR
 export const getGroupsByCourseAndInstructor = asynchandler(async (req, res, next) => {
   const { courseId, level, instructorId } = req.params;
 
@@ -167,7 +164,6 @@ export const getGroupsByCourseAndInstructor = asynchandler(async (req, res, next
 
 
 
-// 5. GET TIME SLOTS FOR A GROUP
 export const getTimeSlotsForGroup  = asynchandler(async (req, res) => {
   try {
     const { groupId } = req.params;
@@ -233,35 +229,48 @@ export const approveCourse = asynchandler(async (req, res, next) => {
 
 
 export const updateCourse = asynchandler(async (req, res, next) => {
-  const course = await Course.findById(req.params.id);
+  const { id } = req.params;
+
+  const course = await Course.findById(id);
   if (!course) {
-    return next(new Error('course_not_found'));
+    return next(new AppError('Course not found', 404));
   }
 
-  // Check authorization
-  if (
-    course.CreatedBy.toString() !== req.user.id &&
-    course.instructorId.toString() !== req.user.id
-  ) {
-    return next(new Error('not_authorized'));
-  }
+  const allowedFields = ['title', 'duration', 'price', 'description', 'levels', 'isActive'];
+  const updateData = {};
 
-  // If image is uploaded, update it
+  allowedFields.forEach(field => {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  });
+
   if (req.file) {
-    req.body.course_imageId = req.file.filename;
-    req.body.course_imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    try {
+      const { secure_url, public_id } = await cloudinary.uploader.upload(req.file.path, {
+        folder: `HB-Institution/Course/${updateData.title || course.title}`
+      });
+      updateData.image = secure_url;
+      updateData.imageId = public_id;
+    } catch (error) {
+      return next(new AppError('Failed to upload image', 500));
+    }
   }
 
-  const updatedCourse = await CourseModel.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true
-  })
-    .populate('instructorId', 'name email')
-    .populate('CreatedBy', 'name email');
+  const updatedCourse = await Course.findByIdAndUpdate(
+    id,
+    updateData,
+    {
+      new: true,
+      runValidators: true
+    }
+  )
+    .populate('CreatedBy', 'firstName')
+    .populate('CategoryId', 'name');
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
-    message: 'course_updated',
+    message: 'Course updated successfully',
     data: updatedCourse
   });
 });
@@ -284,7 +293,6 @@ export const rateCourse = asynchandler(async (req, res, next) => {
     });
   }
 
-  // ✅ Check if student is enrolled
   const isEnrolled = course.students_enrolled.includes(studentId);
   if (!isEnrolled) {
     return res.status(403).json({
@@ -293,7 +301,6 @@ export const rateCourse = asynchandler(async (req, res, next) => {
     });
   }
 
-  // ✅ Set the rating
   course.rating = Number(rating);
   await course.save();
 
@@ -310,8 +317,7 @@ export const rateCourse = asynchandler(async (req, res, next) => {
 export const getInstructorsByCourseAndLevel = asynchandler(async (req, res, next) => {
   const { courseId, level } = req.params;
 
-  // Find active groups for the course and level
-  const groups = await Group.find({ 
+  const groups = await Group.find({
     courseId, 
     level, 
     isActive: true 
@@ -325,14 +331,12 @@ export const getInstructorsByCourseAndLevel = asynchandler(async (req, res, next
       select: 'firstName lastName email specialization avatar'
     });
 
-  // Filter out groups where instructor population failed (due to match conditions)
   const validGroups = groups.filter(group => group.instructorId);
 
   if (!validGroups.length) {
     return next(new AppError('No instructors found for this course and level', 404));
   }
 
-  // Remove duplicate instructors using Map to ensure uniqueness
   const instructorMap = new Map();
   validGroups.forEach(group => {
     const instructor = group.instructorId;
